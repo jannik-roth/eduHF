@@ -1,17 +1,15 @@
 import numpy as np
+from dataclasses import dataclass, field
 
-class geometry:
-    def __init__(self, inp_geom: list[str, list]):
-        self.number_of_atoms = len(inp_geom)
-        self.xyz = np.zeros((3, len(inp_geom)))
-        self.atom_types = np.empty(len(inp_geom), dtype=object)
-        self.charges = np.zeros(len(inp_geom))
+@dataclass
+class Atom:
+    symbol: str
+    xyz : np.array
+    charge: float = field(init=False)
 
-        for idx, atom in enumerate(inp_geom):
-            self.atom_types[idx] = atom[0]
-            self.xyz[:,idx] = np.asarray(atom[1], float)
-            self.charges[idx] = self._asymb_to_charge(atom[0])
-    
+    def __post_init__(self):
+        self.charge = self._asymb_to_charge(self.symbol)
+
     @staticmethod
     def _asymb_to_charge(asymb: str) -> int:
         conv = {'H'  : 1,
@@ -26,5 +24,19 @@ class geometry:
                 'Ne' : 10}
         return conv[asymb]
 
+@dataclass
+class Molecule:
+    geometry: list[Atom] = field(default_factory=list)
+    charge: int = 0
+    nofatoms: int = field(init=False)
+    nofelectrons: int = field(init=False)
 
-        
+    def __post_init__(self):
+        self.nofatoms = len(self.geometry)
+        self.nofelectrons = 0
+        for atom in self.geometry:
+            self.nofelectrons += atom.charge
+        self.nofelectrons -= self.charge
+
+    def list_atom_types(self):
+        return set([atom.symbol for atom in self.geometry])

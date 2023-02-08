@@ -1,38 +1,38 @@
-subroutine slater_exp(alphas, coeffs, zeta, ng, lm_quant)
+subroutine slater_exp(alphas, coeffs, zeta, ng, nl_quant)
     implicit none
     real*8, intent(inout)    :: alphas(ng)
     real*8, intent(inout)    :: coeffs(ng)
     real, intent(in)     :: zeta
     integer, intent(in)      :: ng
-    character(len = 2), intent(in) :: lm_quant
-    integer :: l, lm_to_l
+    character(len = 2), intent(in) :: nl_quant
+    integer :: l, nl_to_l
     real, parameter :: double_fac(8) = (/1.0,1.0,3.0,15.0,105.0,945.0,10395.0,135135.0/) ! OEIS A001147
     real, parameter :: two_over_pi = 0.636619772367582
 
-    l = lm_to_l(lm_quant) ! get l quantum number s = 0, p = 1, ...
+    l = nl_to_l(nl_quant) ! get l quantum number s = 0, p = 1, ...
     
     select case(ng)
     case(1)
-        call sto1g(alphas, coeffs, zeta, lm_quant)
+        call sto1g(alphas, coeffs, zeta, nl_quant)
     case(2)
-        call sto2g(alphas, coeffs, zeta, lm_quant)
+        call sto2g(alphas, coeffs, zeta, nl_quant)
     case(3)
-        call sto3g(alphas, coeffs, zeta, lm_quant)    
+        call sto3g(alphas, coeffs, zeta, nl_quant)    
     end select
 
     ! need to normalize
     coeffs = coeffs * (two_over_pi * alphas)**(0.75) * sqrt(4*alphas)**(l / sqrt(double_fac(l+1)))
 end subroutine
 
-subroutine sto1g(alphas, coeffs, zeta, lm_quant)
+subroutine sto1g(alphas, coeffs, zeta, nl_quant)
     ! http://dx.doi.org/10.1063/1.1672702
     implicit none
     real, intent(in)         :: zeta
-    character(2), intent(in) :: lm_quant
+    character(2), intent(in) :: nl_quant
     real*8, dimension(1), intent(inout)    :: alphas
     real*8, dimension(1), intent(inout)    :: coeffs
 
-    select case(lm_quant)
+    select case(nl_quant)
     case("1s"); alphas(1) = 2.709498091e-1
     case("2s"); alphas(1) = 1.012151084e-1
     case("3s"); alphas(1) = 5.296881757e-2
@@ -53,15 +53,15 @@ subroutine sto1g(alphas, coeffs, zeta, lm_quant)
     coeffs(1) = 1.0
 end subroutine
 
-subroutine sto2g(alphas, coeffs, zeta, lm_quant)
+subroutine sto2g(alphas, coeffs, zeta, nl_quant)
     ! http://dx.doi.org/10.1063/1.1672702
     implicit none
     real, intent(in)         :: zeta
-    character(2), intent(in) :: lm_quant
+    character(2), intent(in) :: nl_quant
     real*8, dimension(2), intent(inout)    :: alphas
     real*8, dimension(2), intent(inout)    :: coeffs
 
-    select case(lm_quant)
+    select case(nl_quant)
     case("1s")
         alphas = (/8.518186635e-1, 1.516232927e-1/)
         coeffs = (/4.301284983e-1, 6.789135305e-1/)
@@ -111,15 +111,15 @@ subroutine sto2g(alphas, coeffs, zeta, lm_quant)
     alphas = alphas * zeta**2
 end subroutine
 
-subroutine sto3g(alphas, coeffs, zeta, lm_quant)
+subroutine sto3g(alphas, coeffs, zeta, nl_quant)
     ! http://dx.doi.org/10.1063/1.1672702
     implicit none
     real, intent(in)         :: zeta
-    character(2), intent(in) :: lm_quant
+    character(2), intent(in) :: nl_quant
     real*8, dimension(3), intent(inout)    :: alphas
     real*8, dimension(3), intent(inout)    :: coeffs
 
-    select case(lm_quant)
+    select case(nl_quant)
     case("1s")
         alphas = (/2.227660584e+0, 4.057711562e-1, 1.098175104e-1/)
         coeffs = (/1.543289673e-1, 5.353281423e-1, 4.446345422e-1/)
@@ -169,19 +169,19 @@ subroutine sto3g(alphas, coeffs, zeta, lm_quant)
     alphas = alphas * zeta**2
 end subroutine
 
-function lm_to_l(lm_quant)
+function nl_to_l(nl_quant)
     implicit none
-    integer :: lm_to_l
-    character(2), intent(in) :: lm_quant
+    integer :: nl_to_l
+    character(2), intent(in) :: nl_quant
     character(1) :: snd
 
-    snd = lm_quant(2:)
+    snd = nl_quant(2:)
     select case(snd)
-    case("s"); lm_to_l = 0
-    case("p"); lm_to_l = 1
-    case("d"); lm_to_l = 2
-    case("f"); lm_to_l = 3
-    case("g"); lm_to_l = 4
+    case("s"); nl_to_l = 0
+    case("p"); nl_to_l = 1
+    case("d"); nl_to_l = 2
+    case("f"); nl_to_l = 3
+    case("g"); nl_to_l = 4
     end select
 end function
 
