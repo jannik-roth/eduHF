@@ -2,6 +2,7 @@ import geometry
 import BasisFunction
 import slater_expansion
 import numpy as np
+import mcmurchiedavidson
 
 #h1 = [['H', [1, 2, 3]],
 #    ]
@@ -16,13 +17,13 @@ import numpy as np
 
 #print(BasisFunction.Slaters2CGaussians(testing, 1))
 
-at = geometry.Atom('H', np.array([1.0, 2.0, 3.0]))
-at2 = geometry.Atom('H', np.array([1.0, 3.0, 4.0]))
-mol = geometry.Molecule([at, at2], -1)
+#at = geometry.Atom('H', np.array([1.0, 2.0, 3.0]))
+#at2 = geometry.Atom('H', np.array([1.0, 3.0, 4.0]))
+#mol = geometry.Molecule([at, at2], -1)
 
-base = {'H' : [('1s', 1.5), ('2p', 3.0)]}
-basisset = BasisFunction.BasisSet(base)
+#base = {'H' : [('1s', 1.5), ('2p', 3.0)]}
+#basisset = BasisFunction.BasisSet(base)
 
-basis = BasisFunction.Basis(mol, basisset, 3)
-print(basis.nof_slater_funcs())
-print(basis.nof_gauss_funcs())
+#basis = BasisFunction.Basis(mol, basisset, 3)
+#print(basis.nof_slater_funcs())
+#print(basis.nof_gauss_funcs())
