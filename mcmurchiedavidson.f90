@@ -77,3 +77,96 @@ recursive function r(t, u, v, n, p, X_PC, Y_PC, Z_PC, R_pc2) result(res)
         res = tmp + X_PC*r(t-1, u, v, n+1, p, X_PC, Y_PC, Z_PC, R_pc2)
     end if
 end function r
+
+function overlap(ng1, coeffs1, exps1, l1, center1, ng2, coeffs2, exps2, l2, center2) result(S)
+    implicit none
+    integer, intent(in) :: ng1
+    real*8, dimension(ng1), intent(in) :: coeffs1
+    real*8, dimension(ng1), intent(in) :: exps1
+    integer, dimension(3), intent(in) :: l1
+    real*8, dimension(3), intent(in) :: center1
+    integer, intent(in) :: ng2
+    real*8, dimension(ng2), intent(in) :: coeffs2
+    real*8, dimension(ng2), intent(in) :: exps2
+    integer, dimension(3), intent(in) :: l2
+    real*8, dimension(3), intent(in) :: center2
+
+    real*8 S, e, overlap_element
+    integer i, j
+    real*8 :: PI = 3.14159265358979323846264338327950288419
+
+    S = 0.0
+    do i=1, ng1
+        do j=1, ng2
+            S  = S + coeffs1(i) * coeffs2(j) &
+               * overlap_element(exps1(i), l1, center1, exps2(j), l2, center2)
+        end do
+    end do
+
+end function overlap
+
+function overlap_element(exp1, l1, xyz1, exp2, l2, xyz2) result(S_inner)
+    implicit none
+    real*8, intent(in) :: exp1
+    integer, dimension(3), intent(in) :: l1
+    real*8, dimension(3),intent(in) :: xyz1
+    real*8, intent(in) :: exp2
+    integer, dimension(3), intent(in) :: l2
+    real*8, dimension(3), intent(in) :: xyz2
+
+    real*8 S_inner, e
+    real*8 :: PI = 3.14159265358979323846264338327950288419
+
+    S_inner = e(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2) &
+            * e(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2) &
+            * e(l1(3), l2(3), 0, xyz1(3)-xyz2(3), exp1, exp2) &
+            * (PI / (exp1 + exp2))**1.50
+
+end function overlap_element
+
+function kinetic(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) result(T)
+    implicit none
+    integer, intent(in) :: ng1
+    real*8, dimension(ng1), intent(in) :: coeffs1
+    real*8, dimension(ng1), intent(in) :: exps1
+    integer, dimension(3), intent(in) :: l1
+    real*8, dimension(3), intent(in) :: xyz1
+    integer, intent(in) :: ng2
+    real*8, dimension(ng2), intent(in) :: coeffs2
+    real*8, dimension(ng2), intent(in) :: exps2
+    integer, dimension(3), intent(in) :: l2
+    real*8, dimension(3), intent(in) :: xyz2
+
+    real*8 :: T, e, tmp1, tmp2, tmp3, overlap_element
+    integer :: i, j
+
+    T = 0.0
+    do i=1, ng1
+        do j=1, ng2
+            tmp1 = exps2(j) * (2 * (l2(1) + l2(2) + l2(3)) + 3) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2, xyz2)
+            tmp2 = -2 * exps2(j) ** 2 * (overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/2, 0, 0/), xyz2) &
+                                           + overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 2, 0/), xyz2) &
+                                           + overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 0, 2/), xyz2))
+            tmp3 = -0.5 * (l2(1) * (l2(1) - 1) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/-2, 0, 0/), xyz2) &
+                          + l2(2) * (l2(2) - 1) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, -2, 0/), xyz2) &
+                          + l2(3) * (l2(3) - 1) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 0, -2/), xyz2))
+            T = T + coeffs1(i)*coeffs2(j)*(tmp1 + tmp2 + tmp3)
+        end do 
+    end do
+
+end function kinetic
+
+
+
+function testin(nob, vec1) result(tmp)
+    implicit none
+    integer*4, intent(in) :: nob
+    real*8, dimension(nob), intent(in) :: vec1
+
+
+    real*8 :: tmp
+    real*8, dimension(nob) :: testing
+    testing = vec1 + (/0, 0, 10, 0, 0/)
+    print *, testing
+    
+end function

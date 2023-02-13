@@ -17,13 +17,39 @@ import mcmurchiedavidson
 
 #print(BasisFunction.Slaters2CGaussians(testing, 1))
 
-#at = geometry.Atom('H', np.array([1.0, 2.0, 3.0]))
-#at2 = geometry.Atom('H', np.array([1.0, 3.0, 4.0]))
-#mol = geometry.Molecule([at, at2], -1)
+def kinetic_item(bf1 : BasisFunction.ContractedGaussianFunction, bf2 : BasisFunction.ContractedGaussianFunction):
+    return mcmurchiedavidson.kinetic(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
 
-#base = {'H' : [('1s', 1.5), ('2p', 3.0)]}
-#basisset = BasisFunction.BasisSet(base)
+def overlap_item(bf1 : BasisFunction.ContractedGaussianFunction, bf2 : BasisFunction.ContractedGaussianFunction):
+    return mcmurchiedavidson.overlap(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
 
-#basis = BasisFunction.Basis(mol, basisset, 3)
-#print(basis.nof_slater_funcs())
-#print(basis.nof_gauss_funcs())
+def overlap_matrix(basis : BasisFunction.Basis):
+    nbf = basis.nof_gauss_funcs()
+    S = np.eye(nbf)
+    for i in range(nbf):
+        for j in range(i+1, nbf):
+            S[i, j] = overlap_item(basis.basis_gauss[i], basis.basis_gauss[j])
+            S[j, i] = S[i, j]
+    return S
+
+def kinetic_matrix(basis : BasisFunction.Basis):
+    nbf = basis.nof_gauss_funcs()
+    T = np.zeros((nbf,nbf))
+    for i in range(nbf):
+        for j in range(i, nbf):
+            T[i, j] = kinetic_item(basis.basis_gauss[i], basis.basis_gauss[j])
+            T[j, i] = T[i, j]
+    return T
+
+
+
+at = geometry.Atom('H', np.array([1.0, 2.0, 3.0]))
+at2 = geometry.Atom('H', np.array([1.0, 3.0, 4.0]))
+mol = geometry.Molecule([at, at2], 0)
+
+base = {'H' : [('1s', 1.5), ('2s', 0.74)]}
+basisset = BasisFunction.BasisSet(base)
+basis = BasisFunction.Basis(mol, basisset, 1)
+
+print(overlap_matrix(basis))
+print(kinetic_matrix(basis))
