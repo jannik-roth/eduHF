@@ -216,6 +216,78 @@ function nuc_attraction(alpha, l1, xyz1, beta, l2, xyz2, xyza) result(nuc_att)
 
 end function nuc_attraction
 
+function potential_2e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, &
+                      ng3, coeffs3, exps3, l3, xyz3, ng4, coeffs4, exps4, l4, xyz4) result(eri)
+    implicit none
+    integer, intent(in) :: ng1, ng2, ng3, ng4
+    real*8, intent(in) :: coeffs1(ng1), coeffs2(ng2), coeffs3(ng3), coeffs4(ng4)
+    real*8, intent(in) :: exps1(ng1), exps2(ng2), exps3(ng3), exps4(ng4)
+    integer, dimension(3), intent(in) :: l1, l2, l3, l4
+    real*8, dimension(3), intent(in) :: xyz1, xyz2, xyz3, xyz4
+
+    real*8 :: eri, electron_repulsion
+    integer :: i, j, k, l
+
+    eri = 0.0
+
+    do i=1, ng1
+        do j=1, ng2
+            do k=1, ng3
+                do l=1, ng4
+                    eri = eri + coeffs1(i) * coeffs2(j) * coeffs3(k) * coeffs4(l) &
+                                * electron_repulsion(exps1(i), l1, xyz1, exps2(k), l2, xyz2, &
+                                                     exps3(k), l3, xyz3, exps4(l), l4, xyz4)
+                end do
+            end do
+        end do
+    end do
+
+end function potential_2e
+
+function electron_repulsion(alpha, l1, xyz1, beta, l2, xyz2, gamma, l3, xyz3, delta, l4, xyz4) result(el_rep)
+    implicit none
+    real*8, intent(in) :: alpha, beta, gamma, delta
+    integer, dimension(3), intent(in) :: l1, l2, l3, l4
+    real*8, dimension(3), intent(in) :: xyz1, xyz2, xyz3, xyz4
+
+    real*8 :: p, q, el_rep, R_pq2, e, r
+    real*8, dimension(3) :: xyzp, xyzq
+    integer :: t, u, v, tau, nu, phi
+    real*8, parameter :: PI = 3.14159265358979323846264338327950288419
+
+    p = alpha +beta
+    q = gamma + delta
+    xyzp = (alpha * xyz1 + beta * xyz2) / p
+    xyzq = (gamma * xyz3 + delta * xyz4) / q
+    R_pq2 = (xyzp(1) - xyzq(1))**2 + (xyzp(2) - xyzq(2))**2 + (xyzp(3) - xyzq(3))**2
+
+    el_rep = 0.0
+
+    do t=0, (l1(1)+l2(1))
+        do u=0, (l1(2)+l2(2))
+            do v=0, (l1(3)+l2(3))
+                do tau=0, (l3(1)+l4(1))
+                    do nu=0, (l3(2)+l4(2))
+                        do phi=0, (l3(3)+l4(3))
+                            el_rep = el_rep + e(l1(1), l2(1), t, (xyz1(1) - xyz2(1)), alpha, beta) &
+                                              * e(l1(2), l2(2), u, (xyz1(2) - xyz2(2)), alpha, beta) &
+                                              * e(l1(3), l2(3), v, (xyz1(3) - xyz2(3)), alpha, beta) &
+                                              * e(l3(1), l4(1), tau, (xyz3(1) - xyz4(1)), gamma, delta) &
+                                              * e(l3(2), l4(2), nu, (xyz3(2) - xyz4(2)), gamma, delta) &
+                                              * e(l3(3), l4(3), phi, (xyz3(3) - xyz4(3)), gamma, delta) &
+                                              * r(t+tau, u+nu, v+phi, 0, p*q/(p+q), &
+                                                  xyzp(1)-xyzq(1), xyzp(2)-xyzq(2), xyzp(3)-xyzq(3), R_pq2) &
+                                              * (-1)**(tau+nu+phi)
+                        end do
+                    end do
+                end do
+            end do
+        end do
+    end do
+
+    el_rep = el_rep * 2 * PI ** (2.50) / (p * q * sqrt(p + q))
+end function electron_repulsion
+
 ! function testin(nob, vec1) result(tmp)
 !     implicit none
 !     integer*4, intent(in) :: nob
