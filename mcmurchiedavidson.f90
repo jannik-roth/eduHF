@@ -91,9 +91,8 @@ function overlap(ng1, coeffs1, exps1, l1, center1, ng2, coeffs2, exps2, l2, cent
     integer, dimension(3), intent(in) :: l2
     real*8, dimension(3), intent(in) :: center2
 
-    real*8 S, e, overlap_element
+    real*8 S, overlap_element
     integer i, j
-    real*8 :: PI = 3.14159265358979323846264338327950288419
 
     S = 0.0
     do i=1, ng1
@@ -137,7 +136,7 @@ function kinetic(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) r
     integer, dimension(3), intent(in) :: l2
     real*8, dimension(3), intent(in) :: xyz2
 
-    real*8 :: T, e, tmp1, tmp2, tmp3, overlap_element
+    real*8 :: T, tmp1, tmp2, tmp3, overlap_element
     integer :: i, j
 
     T = 0.0
@@ -156,17 +155,76 @@ function kinetic(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) r
 
 end function kinetic
 
-
-
-function testin(nob, vec1) result(tmp)
+function potential_1e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, xyza) result(V)
     implicit none
-    integer*4, intent(in) :: nob
-    real*8, dimension(nob), intent(in) :: vec1
+    integer, intent(in) :: ng1
+    real*8, dimension(ng1), intent(in) :: coeffs1
+    real*8, dimension(ng1), intent(in) :: exps1
+    integer, dimension(3), intent(in) :: l1
+    real*8, dimension(3), intent(in) :: xyz1
+    integer, intent(in) :: ng2
+    real*8, dimension(ng2), intent(in) :: coeffs2
+    real*8, dimension(ng2), intent(in) :: exps2
+    integer, dimension(3), intent(in) :: l2
+    real*8, dimension(3), intent(in) :: xyz2
+    real*8, dimension(3), intent(in) :: xyza
+
+    integer :: i, j
+    real*8 :: V, nuc_attraction
+
+    V = 0.0
+
+    do i=1, ng1
+        do j=1, ng2
+            V = V + coeffs1(i)*coeffs2(j)*nuc_attraction(exps1(i), l1, xyz1, exps2(j), l2,xyz2, xyza)
+        end do
+    end do
+
+end function potential_1e
+
+function nuc_attraction(alpha, l1, xyz1, beta, l2, xyz2, xyza) result(nuc_att)
+    implicit none
+    real*8, intent(in) :: alpha, beta
+    integer, intent(in) :: l1(3), l2(3)
+    real*8, intent(in) :: xyz1(3), xyz2(3), xyza(3)
+
+    real*8 :: p
+    real*8, dimension(3) :: xyzp
+    real*8 :: R_pc2
+    real*8, parameter :: PI = 3.14159265358979323846264338327950288419
+
+    real*8 :: e, r, nuc_att
+    integer :: t, u , v
+
+    p = alpha + beta
+    xyzp = (xyz1 * alpha + xyz2 * beta) / p
+    R_pc2 = (xyzp(1) - xyza(1))**2 + (xyzp(2) - xyza(2))**2 + (xyzp(3)-xyza(3))**2
+    nuc_att = 0.0
 
 
-    real*8 :: tmp
-    real*8, dimension(nob) :: testing
-    testing = vec1 + (/0, 0, 10, 0, 0/)
-    print *, testing
+    do t=0, (l1(1)+l2(1))
+        do u=0, (l1(2)+l2(2))
+            do v=0, (l1(3)+l2(3))
+                nuc_att = nuc_att + e(l1(1), l2(1), t, (xyz1(1)-xyz2(1)), alpha, beta) &
+                            * e(l1(2), l2(2), u, (xyz1(2)-xyz2(2)), alpha, beta) &
+                            * e(l1(3), l2(3), v, (xyz1(3)-xyz2(3)), alpha, beta) &
+                            * r(t, u, v, 0, p, xyzp(1)-xyza(1), xyzp(2)-xyza(2), xyzp(3)-xyza(3), R_pc2)
+            end do
+        end do
+    end do
+    nuc_att = nuc_att * 2.0 * PI / p
+
+end function nuc_attraction
+
+! function testin(nob, vec1) result(tmp)
+!     implicit none
+!     integer*4, intent(in) :: nob
+!     real*8, dimension(nob), intent(in) :: vec1
+
+
+!     real*8 :: tmp
+!     real*8, dimension(nob) :: testing
+!     testing = vec1 + (/0, 0, 10, 0, 0/)
+!     print *, testing
     
-end function
+! end function
