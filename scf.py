@@ -12,9 +12,9 @@ class SCF:
 
     def prepare_integrals(self):
         S = self.overlap_matrix()
-        T = SCF.kinetic_matrix()
-        V = SCF.potential_1e_matrix()
-        ERIs = SCF.potential_2e_tensor()
+        T = self.kinetic_matrix()
+        V = self.potential_1e_matrix()
+        ERIs = self.potential_2e_tensor()
         return S, T, V, ERIs
 
     def overlap_matrix(self):
