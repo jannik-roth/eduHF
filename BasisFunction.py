@@ -99,9 +99,9 @@ class Basis:
         self._check_compatible()
 
         self.basis_slater = self._build_basis_slater()
-        print(self.basis_slater)
+        #print(self.basis_slater)
         self.basis_gauss = self._build_basis_gauss()
-        print(self.basis_gauss)
+        #print(self.basis_gauss)
 
     def _check_compatible(self):
         print(self.mol.list_atom_types())
