@@ -29,14 +29,28 @@ class Molecule:
     geometry: list[Atom] = field(default_factory=list)
     charge: int = 0
     nofatoms: int = field(init=False)
-    nofelectrons: int = field(init=False)
+    noe: int = field(init=False)
+    core_pot: float = field(init=False)
 
     def __post_init__(self):
         self.nofatoms = len(self.geometry)
-        self.nofelectrons = 0
+        self.noe = 0
         for atom in self.geometry:
-            self.nofelectrons += atom.charge
-        self.nofelectrons -= self.charge
+            self.noe += atom.charge
+        self.noe -= self.charge
+        self.core_pot = self.core_potential()
 
     def list_atom_types(self):
         return set([atom.symbol for atom in self.geometry])
+    
+    def core_potential(self):
+        res = 0.0
+        for a in range(self.nofatoms):
+            for b in range(a+1, self.nofatoms):
+                res += self.geometry[a].charge * self.geometry[b].charge * 1.0/(self._distance(a, b))
+        return res
+    
+    def _distance(self, a : int, b : int):
+        xyza = self.geometry[a].xyz
+        xyzb = self.geometry[b].xyz
+        return np.sqrt(np.sum((xyza - xyzb)**2))

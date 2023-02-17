@@ -3,17 +3,6 @@ import slater_expansion
 from dataclasses import dataclass
 import geometry
 
-class BasisFunction:
-    def __init__(self, zeta: float, xyz, nl_quant: str, ng: int):
-        self.zeta = zeta
-        self.xyz = np.asarray(xyz)
-        self.nl_quant = nl_quant
-        self.ng = ng
-
-        self.coeffs = np.zeros(ng)
-        self.alphas = np.zeros(ng)
-        slater_expansion.slater_exp(self.alphas, self.coeffs, self.ng, self.nl_quant)
-
 @staticmethod
 def _Lvecs_from_nl(nl_quant: str):
     conv = {"s" : [np.array([0, 0, 0], dtype=int)],
@@ -34,15 +23,6 @@ def _Lvecs_from_nl(nl_quant: str):
     }
     return conv[nl_quant[1]]
 
-@staticmethod 
-def _ls_from_nl(nl_quant : str):
-    conv = {"s" : 1,
-            "p" : 3,
-            "d" : 6,
-            "f" : 10,
-            "g" : 15}
-    return conv[nl_quant[1]]
-
 @dataclass
 class SlaterFunction:
     zeta: float
@@ -58,26 +38,6 @@ class ContractedGaussianFunction:
     l_vec: np.array
     center: int
     xyz: np.array
-
-def Slater2CGaussians(slater: SlaterFunction, ng: int):
-    cgaussians = []
-
-    l_vecs = _Lvecs_from_nl(slater.nl_quant)
-    coeffs = np.zeros(ng)
-    alphas = np.zeros(ng)
-    slater_expansion.slater_exp(alphas, coeffs, ng, slater.nl_quant)
-
-    for l_vec in l_vecs:
-        cgaussians.append(ContractedGaussianFunction(ng, alphas, coeffs, l_vec, slater.center, slater.xyz))
-    
-    return cgaussians
-
-def Slaters2CGaussians(slaters: list[SlaterFunction], ng: int):
-    cgaussians = []
-    for slater in slaters:
-        cgaussians.append(Slater2CGaussians(slater, ng))
-    return cgaussians
-
 
 class BasisSet:
     def __init__(self, basis_dict= dict[ str: list[tuple[str, float]]]):
@@ -96,16 +56,17 @@ class Basis:
         self.mol = mol
         self.basis_set = basis_set
         self.ng = ng
+        self.nbf = None
+        self.nbf_slater = None
         self._check_compatible()
 
         self.basis_slater = self._build_basis_slater()
-        #print(self.basis_slater)
-        self.basis_gauss = self._build_basis_gauss()
-        #print(self.basis_gauss)
+        self.basis = self._build_basis_gauss()
+
+    def __call__(self, idx : int):
+        return self.basis[idx]
 
     def _check_compatible(self):
-        print(self.mol.list_atom_types())
-        print(self.basis_set.available_atom_types())
         if not self.mol.list_atom_types().issubset(self.basis_set.available_atom_types()):
             raise ValueError("BasisSet does not cover all necessary atom types!!!")
     
@@ -115,30 +76,33 @@ class Basis:
             bfs = self.basis_set(atom.symbol)
             for (nl, zeta) in bfs:
                 basis_sl.append(SlaterFunction(zeta, nl, idx, atom.xyz))
+        self.nbf_slater = len(basis_sl)
         return basis_sl
-    
-    def nof_slater_funcs(self):
-        return len(self.basis_slater)
     
     def _build_basis_gauss(self) -> list[ContractedGaussianFunction]:
         basis = []
         for sl_func in self.basis_slater:
-            basis.extend(Slater2CGaussians(sl_func, self.ng))
+            basis.extend(self.Slater2CGaussians(sl_func, self.ng))
+        self.nbf = len(basis)
         return basis
     
-    @staticmethod
-    def Slater2CGaussians(slater: SlaterFunction, ng: int):
+    def Slater2CGaussians(self, slater: SlaterFunction, ng: int):
         cgaussians = []
 
         l_vecs = _Lvecs_from_nl(slater.nl_quant)
         coeffs = np.zeros(ng)
         alphas = np.zeros(ng)
-        slater_expansion.slater_exp(alphas, coeffs, ng, slater.nl_quant)
+        slater_expansion.slater_exp(alphas, coeffs, slater.zeta, slater.nl_quant)
+
         for l_vec in l_vecs:
             cgaussians.append(ContractedGaussianFunction(ng, alphas, coeffs, l_vec, slater.center, slater.xyz))
+        
         return cgaussians
-    
-    def nof_gauss_funcs(self):
-        return len(self.basis_gauss)
+
+    def Slaters2CGaussians(self, slaters: list[SlaterFunction], ng: int):
+        cgaussians = []
+        for slater in slaters:
+            cgaussians.append(self.Slater2CGaussians(slater, ng))
+        return cgaussians
 
 

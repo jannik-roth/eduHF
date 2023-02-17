@@ -21,32 +21,32 @@ function boys(T, n)
     end if
 end function
 
-recursive function e(n, m, T, AB, alpha, beta) result(res)
+recursive function e(n, m, T, AB, exp1, exp2) result(res)
     implicit none
     integer, intent(in) :: n
     integer, intent(in) :: m
     integer, intent(in) :: T
     real*8, intent(in)  :: AB
-    real*8, intent(in)  :: alpha
-    real*8, intent(in)  :: beta
+    real*8, intent(in)  :: exp1
+    real*8, intent(in)  :: exp2
 
     real*8 :: p, q, res
 
-    p = alpha + beta
-    q = alpha * beta / p
+    p = exp1 + exp2
+    q = exp1 * exp2 / p
 
     if ( (T .lt. 0) .or. (T .gt. (n+m))) then
         res = 0.0
     else if ((T .eq. 0 .and. n .eq. 0) .and. m .eq. 0) then
         res = exp(-q * AB**2)
     else if (n .eq. 0) then
-        res = 1.0/(2.0*p) * e(n, m-1, T-1, AB, alpha, beta) &
-            + alpha*AB/p * e(n, m-1, T, AB, alpha, beta) &
-            + (T+1.0) * e(n, m-1, T+1, AB, alpha, beta)
+        res = 1.0/(2.0*p) * e(n, m-1, T-1, AB, exp1, exp2) &
+            + exp1*AB/p * e(n, m-1, T, AB, exp1, exp2) &
+            + (T+1.0) * e(n, m-1, T+1, AB, exp1, exp2)
     else 
-        res = 1.0/(2.0*p) * e(n-1, m, T-1, AB, alpha, beta) &
-            - beta*AB/p * e(n-1, m, T, AB, alpha, beta) &
-            + (T+1.0) * e(n-1, m, T+1, AB, alpha, beta)
+        res = 1.0/(2.0*p) * e(n-1, m, T-1, AB, exp1, exp2) &
+            - exp2*AB/p * e(n-1, m, T, AB, exp1, exp2) &
+            + (T+1.0) * e(n-1, m, T+1, AB, exp1, exp2)
     end if
 end function e
 
@@ -78,18 +78,18 @@ recursive function r(t, u, v, n, p, X_PC, Y_PC, Z_PC, R_pc2) result(res)
     end if
 end function r
 
-function overlap(ng1, coeffs1, exps1, l1, center1, ng2, coeffs2, exps2, l2, center2) result(S)
+function overlap(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) result(S)
     implicit none
     integer, intent(in) :: ng1
     real*8, dimension(ng1), intent(in) :: coeffs1
     real*8, dimension(ng1), intent(in) :: exps1
     integer, dimension(3), intent(in) :: l1
-    real*8, dimension(3), intent(in) :: center1
+    real*8, dimension(3), intent(in) :: xyz1
     integer, intent(in) :: ng2
     real*8, dimension(ng2), intent(in) :: coeffs2
     real*8, dimension(ng2), intent(in) :: exps2
     integer, dimension(3), intent(in) :: l2
-    real*8, dimension(3), intent(in) :: center2
+    real*8, dimension(3), intent(in) :: xyz2
 
     real*8 S, overlap_element
     integer i, j
@@ -98,7 +98,7 @@ function overlap(ng1, coeffs1, exps1, l1, center1, ng2, coeffs2, exps2, l2, cent
     do i=1, ng1
         do j=1, ng2
             S  = S + coeffs1(i) * coeffs2(j) &
-               * overlap_element(exps1(i), l1, center1, exps2(j), l2, center2)
+               * overlap_element(exps1(i), l1, xyz1, exps2(j), l2, xyz2)
         end do
     end do
 
@@ -113,7 +113,7 @@ function overlap_element(exp1, l1, xyz1, exp2, l2, xyz2) result(S_inner)
     integer, dimension(3), intent(in) :: l2
     real*8, dimension(3), intent(in) :: xyz2
 
-    real*8 S_inner, e
+    real*8 :: S_inner, e
     real*8 :: PI = 3.14159265358979323846264338327950288419
 
     S_inner = e(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2) &
@@ -182,9 +182,9 @@ function potential_1e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xy
 
 end function potential_1e
 
-function nuc_attraction(alpha, l1, xyz1, beta, l2, xyz2, xyza) result(nuc_att)
+function nuc_attraction(exp1, l1, xyz1, exp2, l2, xyz2, xyza) result(nuc_att)
     implicit none
-    real*8, intent(in) :: alpha, beta
+    real*8, intent(in) :: exp1, exp2
     integer, intent(in) :: l1(3), l2(3)
     real*8, intent(in) :: xyz1(3), xyz2(3), xyza(3)
 
@@ -196,8 +196,8 @@ function nuc_attraction(alpha, l1, xyz1, beta, l2, xyz2, xyza) result(nuc_att)
     real*8 :: e, r, nuc_att
     integer :: t, u , v
 
-    p = alpha + beta
-    xyzp = (xyz1 * alpha + xyz2 * beta) / p
+    p = exp1 + exp2
+    xyzp = (xyz1 * exp1 + xyz2 * exp2) / p
     R_pc2 = (xyzp(1) - xyza(1))**2 + (xyzp(2) - xyza(2))**2 + (xyzp(3)-xyza(3))**2
     nuc_att = 0.0
 
@@ -205,9 +205,9 @@ function nuc_attraction(alpha, l1, xyz1, beta, l2, xyz2, xyza) result(nuc_att)
     do t=0, (l1(1)+l2(1))
         do u=0, (l1(2)+l2(2))
             do v=0, (l1(3)+l2(3))
-                nuc_att = nuc_att + e(l1(1), l2(1), t, (xyz1(1)-xyz2(1)), alpha, beta) &
-                            * e(l1(2), l2(2), u, (xyz1(2)-xyz2(2)), alpha, beta) &
-                            * e(l1(3), l2(3), v, (xyz1(3)-xyz2(3)), alpha, beta) &
+                nuc_att = nuc_att + e(l1(1), l2(1), t, (xyz1(1)-xyz2(1)), exp1, exp2) &
+                            * e(l1(2), l2(2), u, (xyz1(2)-xyz2(2)), exp1, exp2) &
+                            * e(l1(3), l2(3), v, (xyz1(3)-xyz2(3)), exp1, exp2) &
                             * r(t, u, v, 0, p, xyzp(1)-xyza(1), xyzp(2)-xyza(2), xyzp(3)-xyza(3), R_pc2)
             end do
         end do
@@ -235,7 +235,7 @@ function potential_2e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xy
             do k=1, ng3
                 do l=1, ng4
                     eri = eri + coeffs1(i) * coeffs2(j) * coeffs3(k) * coeffs4(l) &
-                                * electron_repulsion(exps1(i), l1, xyz1, exps2(k), l2, xyz2, &
+                                * electron_repulsion(exps1(i), l1, xyz1, exps2(j), l2, xyz2, &
                                                      exps3(k), l3, xyz3, exps4(l), l4, xyz4)
                 end do
             end do
@@ -244,9 +244,9 @@ function potential_2e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xy
 
 end function potential_2e
 
-function electron_repulsion(alpha, l1, xyz1, beta, l2, xyz2, gamma, l3, xyz3, delta, l4, xyz4) result(el_rep)
+function electron_repulsion(exp1, l1, xyz1, exp2, l2, xyz2, exp3, l3, xyz3, exp4, l4, xyz4) result(el_rep)
     implicit none
-    real*8, intent(in) :: alpha, beta, gamma, delta
+    real*8, intent(in) :: exp1, exp2, exp3, exp4
     integer, dimension(3), intent(in) :: l1, l2, l3, l4
     real*8, dimension(3), intent(in) :: xyz1, xyz2, xyz3, xyz4
 
@@ -255,10 +255,10 @@ function electron_repulsion(alpha, l1, xyz1, beta, l2, xyz2, gamma, l3, xyz3, de
     integer :: t, u, v, tau, nu, phi
     real*8, parameter :: PI = 3.14159265358979323846264338327950288419
 
-    p = alpha +beta
-    q = gamma + delta
-    xyzp = (alpha * xyz1 + beta * xyz2) / p
-    xyzq = (gamma * xyz3 + delta * xyz4) / q
+    p = exp1 +exp2
+    q = exp3 + exp4
+    xyzp = (exp1 * xyz1 + exp2 * xyz2) / p
+    xyzq = (exp3 * xyz3 + exp4 * xyz4) / q
     R_pq2 = (xyzp(1) - xyzq(1))**2 + (xyzp(2) - xyzq(2))**2 + (xyzp(3) - xyzq(3))**2
 
     el_rep = 0.0
@@ -269,12 +269,12 @@ function electron_repulsion(alpha, l1, xyz1, beta, l2, xyz2, gamma, l3, xyz3, de
                 do tau=0, (l3(1)+l4(1))
                     do nu=0, (l3(2)+l4(2))
                         do phi=0, (l3(3)+l4(3))
-                            el_rep = el_rep + e(l1(1), l2(1), t, (xyz1(1) - xyz2(1)), alpha, beta) &
-                                              * e(l1(2), l2(2), u, (xyz1(2) - xyz2(2)), alpha, beta) &
-                                              * e(l1(3), l2(3), v, (xyz1(3) - xyz2(3)), alpha, beta) &
-                                              * e(l3(1), l4(1), tau, (xyz3(1) - xyz4(1)), gamma, delta) &
-                                              * e(l3(2), l4(2), nu, (xyz3(2) - xyz4(2)), gamma, delta) &
-                                              * e(l3(3), l4(3), phi, (xyz3(3) - xyz4(3)), gamma, delta) &
+                            el_rep = el_rep + e(l1(1), l2(1), t, (xyz1(1) - xyz2(1)), exp1, exp2) &
+                                              * e(l1(2), l2(2), u, (xyz1(2) - xyz2(2)), exp1, exp2) &
+                                              * e(l1(3), l2(3), v, (xyz1(3) - xyz2(3)), exp1, exp2) &
+                                              * e(l3(1), l4(1), tau, (xyz3(1) - xyz4(1)), exp3, exp4) &
+                                              * e(l3(2), l4(2), nu, (xyz3(2) - xyz4(2)), exp3, exp4) &
+                                              * e(l3(3), l4(3), phi, (xyz3(3) - xyz4(3)), exp3, exp4) &
                                               * r(t+tau, u+nu, v+phi, 0, p*q/(p+q), &
                                                   xyzp(1)-xyzq(1), xyzp(2)-xyzq(2), xyzp(3)-xyzq(3), R_pq2) &
                                               * (-1)**(tau+nu+phi)
@@ -287,16 +287,3 @@ function electron_repulsion(alpha, l1, xyz1, beta, l2, xyz2, gamma, l3, xyz3, de
 
     el_rep = el_rep * 2 * PI ** (2.50) / (p * q * sqrt(p + q))
 end function electron_repulsion
-
-! function testin(nob, vec1) result(tmp)
-!     implicit none
-!     integer*4, intent(in) :: nob
-!     real*8, dimension(nob), intent(in) :: vec1
-
-
-!     real*8 :: tmp
-!     real*8, dimension(nob) :: testing
-!     testing = vec1 + (/0, 0, 10, 0, 0/)
-!     print *, testing
-    
-! end function
