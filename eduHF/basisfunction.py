@@ -1,7 +1,7 @@
 import numpy as np
-import slater_expansion
+from .slater_expansion import *
 from dataclasses import dataclass
-import geometry
+from .geometry import Molecule
 
 @staticmethod
 def _Lvecs_from_nl(nl_quant: str):
@@ -52,7 +52,7 @@ class BasisSet:
         return set(self.basis.keys())
     
 class Basis:
-    def __init__(self, mol: geometry.Molecule, basis_set: BasisSet, ng: int):
+    def __init__(self, mol: Molecule, basis_set: BasisSet, ng: int):
         self.mol = mol
         self.basis_set = basis_set
         self.ng = ng
@@ -92,7 +92,7 @@ class Basis:
         l_vecs = _Lvecs_from_nl(slater.nl_quant)
         coeffs = np.zeros(ng)
         alphas = np.zeros(ng)
-        slater_expansion.slater_exp(alphas, coeffs, slater.zeta, slater.nl_quant)
+        slater_exp(alphas, coeffs, slater.zeta, slater.nl_quant)
 
         for l_vec in l_vecs:
             cgaussians.append(ContractedGaussianFunction(ng, alphas, coeffs, l_vec, slater.center, slater.xyz))

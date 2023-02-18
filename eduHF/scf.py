@@ -1,12 +1,13 @@
 import numpy as np
-import geometry
-import BasisFunction
-import mcmurchiedavidson
+from .mcmurchie_davidson import *
+from .geometry import *
+from .basisfunction import *
+
 
 class SCF:
     def __init__(self,
-                 mol : geometry.Molecule,
-                 basis : BasisFunction.Basis,
+                 mol : Molecule,
+                 basis : Basis,
                  max_iter : int = 50,
                  convergence_crit : float = 1e-6,
                  convergence_type : str = 'com'):
@@ -176,28 +177,28 @@ class SCF:
         return eris
     
     @staticmethod
-    def kinetic_item(bf1 : BasisFunction.ContractedGaussianFunction,
-                     bf2 : BasisFunction.ContractedGaussianFunction):
-        return mcmurchiedavidson.kinetic(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
+    def kinetic_item(bf1 : ContractedGaussianFunction,
+                     bf2 : ContractedGaussianFunction):
+        return kinetic(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
                                          bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
     @staticmethod
-    def overlap_item(bf1 : BasisFunction.ContractedGaussianFunction,
-                     bf2 : BasisFunction.ContractedGaussianFunction):
-        return mcmurchiedavidson.overlap(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
+    def overlap_item(bf1 : ContractedGaussianFunction,
+                     bf2 : ContractedGaussianFunction):
+        return overlap(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
                                          bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
     @staticmethod
-    def potential_1e_item(bf1 : BasisFunction.ContractedGaussianFunction,
-                          bf2 : BasisFunction.ContractedGaussianFunction,
-                          at : geometry.Atom):
-        return mcmurchiedavidson.potential_1e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, 
+    def potential_1e_item(bf1 : ContractedGaussianFunction,
+                          bf2 : ContractedGaussianFunction,
+                          at : Atom):
+        return potential_1e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, 
                                               bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
                                               at.xyz)
     @staticmethod
-    def potential_2e_item(bf1 : BasisFunction.ContractedGaussianFunction,
-                          bf2 : BasisFunction.ContractedGaussianFunction,
-                          bf3 : BasisFunction.ContractedGaussianFunction,
-                          bf4 : BasisFunction.ContractedGaussianFunction):
-        return mcmurchiedavidson.potential_2e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
+    def potential_2e_item(bf1 : ContractedGaussianFunction,
+                          bf2 : ContractedGaussianFunction,
+                          bf3 : ContractedGaussianFunction,
+                          bf4 : ContractedGaussianFunction):
+        return potential_2e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
                                               bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
                                               bf3.coeffs, bf3.alphas, bf3.l_vec, bf3.xyz,
                                               bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz,)
