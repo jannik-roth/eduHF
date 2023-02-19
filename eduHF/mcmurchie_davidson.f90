@@ -57,7 +57,8 @@ recursive function r(t, u, v, n, p, X_PC, Y_PC, Z_PC, R_pc2) result(res)
 
     real*8 :: boys
     real*8 :: res
-    real*8 :: tmp = 0.0
+    real*8 :: tmp
+    tmp = 0.0
     if ((t .eq. 0 .and. u .eq. 0) .and. v .eq. 0) then
         res = (-2.0*p)**n * boys(p*R_pc2, n)
     else if (t .eq. 0 .and. u .eq. 0) then
@@ -144,11 +145,11 @@ function kinetic(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) r
         do j=1, ng2
             tmp1 = exps2(j) * (2 * (l2(1) + l2(2) + l2(3)) + 3) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2, xyz2)
             tmp2 = -2 * exps2(j) ** 2 * (overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/2, 0, 0/), xyz2) &
-                                           + overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 2, 0/), xyz2) &
-                                           + overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 0, 2/), xyz2))
+                                         + overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 2, 0/), xyz2) &
+                                         + overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 0, 2/), xyz2))
             tmp3 = -0.5 * (l2(1) * (l2(1) - 1) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/-2, 0, 0/), xyz2) &
-                          + l2(2) * (l2(2) - 1) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, -2, 0/), xyz2) &
-                          + l2(3) * (l2(3) - 1) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 0, -2/), xyz2))
+                           + l2(2) * (l2(2) - 1) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, -2, 0/), xyz2) &
+                           + l2(3) * (l2(3) - 1) * overlap_element(exps1(i), l1, xyz1, exps2(j), l2 + (/0, 0, -2/), xyz2))
             T = T + coeffs1(i)*coeffs2(j)*(tmp1 + tmp2 + tmp3)
         end do 
     end do

@@ -82,7 +82,6 @@ class SCF:
     def print_not_conv_info(self):
         print("#"*self.print_width)
         print(f'    SCF did NOT converge after {self.max_iter} iterations'.center(self.print_width))
-        print(f'req. {self.req_iterations} iterations'.center(self.print_width))
         print("#"*self.print_width)
 
     def print_conv_info(self):
@@ -180,25 +179,25 @@ class SCF:
     def kinetic_item(bf1 : ContractedGaussianFunction,
                      bf2 : ContractedGaussianFunction):
         return kinetic(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                                         bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
+                       bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
     @staticmethod
     def overlap_item(bf1 : ContractedGaussianFunction,
                      bf2 : ContractedGaussianFunction):
         return overlap(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                                         bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
+                       bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
     @staticmethod
     def potential_1e_item(bf1 : ContractedGaussianFunction,
                           bf2 : ContractedGaussianFunction,
                           at : Atom):
         return potential_1e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, 
-                                              bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
-                                              at.xyz)
+                            bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
+                            at.xyz)
     @staticmethod
     def potential_2e_item(bf1 : ContractedGaussianFunction,
                           bf2 : ContractedGaussianFunction,
                           bf3 : ContractedGaussianFunction,
                           bf4 : ContractedGaussianFunction):
         return potential_2e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                                              bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
-                                              bf3.coeffs, bf3.alphas, bf3.l_vec, bf3.xyz,
-                                              bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz,)
+                            bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
+                            bf3.coeffs, bf3.alphas, bf3.l_vec, bf3.xyz,
+                            bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz,)
