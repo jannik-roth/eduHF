@@ -200,4 +200,4 @@ class SCF:
         return potential_2e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
                             bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
                             bf3.coeffs, bf3.alphas, bf3.l_vec, bf3.xyz,
-                            bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz,)
+                            bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz)
