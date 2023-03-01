@@ -7,15 +7,9 @@ from .basisfunction import *
 class SCF:
     def __init__(self,
                  mol : Molecule,
-                 basis : Basis,
-                 max_iter : int = 50,
-                 convergence_crit : float = 1e-6,
-                 convergence_type : str = 'com'):
+                 basis : Basis):
         self.mol = mol
         self.basis = basis
-        self.max_iter = max_iter
-        self.convergence_type = convergence_type
-        self.convergence_crit = convergence_crit
 
         self.S, self.T, self.V = None, None, None
         self.X, self.H, self.F_prime = None, None, None
@@ -31,7 +25,15 @@ class SCF:
 
         self.print_width = 60
 
-    def run_scf(self):
+    def run_scf(self, 
+                max_iter : int = 50,
+                convergence_crit : float = 1e-6,
+                convergence_type : str = 'com'):
+        
+        self.max_iter = max_iter
+        self.convergence_type = convergence_type
+        self.convergence_crit = convergence_crit
+        
         if not self.setup_int:
             raise ValueError(f"Integrals are not set up! Please run {self.__class__.__name__}.setup_int() before running the SCF procedure")
             return
@@ -59,7 +61,7 @@ class SCF:
             self.scf_energy = self.calc_HF_energy()
 
             self.converged, self.error = self.check_convergence()
-            print("{:<10} {:<15} {:<15} {:<10}".format(i, f"{self.scf_energy:,.10f}", f"{self.error:,.10f}", str(self.converged)))
+            print("{:<10} {:<15} {:<15} {:<10}".format(i, f"{self.scf_energy:,.7e}", f"{self.error:,.7e}", str(self.converged)))
 
             if self.converged:
                 self.req_iterations = i
@@ -73,9 +75,9 @@ class SCF:
         print("#"*self.print_width)
         print("SCF setup".center(self.print_width))
         print("#"*self.print_width)
-        print(f"  max_iter -> {self.max_iter}")
-        print(f"  convergence_crit -> {self.convergence_crit:e}")
-        print(f"  convergence_type -> {self.convergence_type}")
+        print(f"  max_iter          -> {self.max_iter}")
+        print(f"  convergence_crit  -> {self.convergence_crit:e}")
+        print(f"  convergence_type  -> {self.convergence_type}")
         print("Starting SCF now".center(self.print_width))
         print("#"*self.print_width)
 

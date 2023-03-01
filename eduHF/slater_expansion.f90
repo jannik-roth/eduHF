@@ -25,6 +25,7 @@ subroutine slater_exp(exps, coeffs, zeta, ng, nl_quant)
 end subroutine
 
 subroutine sto1g(exps, coeffs, zeta, nl_quant)
+    ! Taken from: The Journal of Chemical Physics 52, 431 (1970)
     ! http://dx.doi.org/10.1063/1.1672702
     implicit none
     real, intent(in)         :: zeta
@@ -54,6 +55,7 @@ subroutine sto1g(exps, coeffs, zeta, nl_quant)
 end subroutine
 
 subroutine sto2g(exps, coeffs, zeta, nl_quant)
+    ! Taken from: The Journal of Chemical Physics 52, 431 (1970)
     ! http://dx.doi.org/10.1063/1.1672702
     implicit none
     real, intent(in)         :: zeta
@@ -112,6 +114,7 @@ subroutine sto2g(exps, coeffs, zeta, nl_quant)
 end subroutine
 
 subroutine sto3g(exps, coeffs, zeta, nl_quant)
+    ! Taken from: The Journal of Chemical Physics 52, 431 (1970)
     ! http://dx.doi.org/10.1063/1.1672702
     implicit none
     real, intent(in)         :: zeta
