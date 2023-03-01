@@ -1,6 +1,6 @@
 # eduHF - educational Hartree-Fock program
 
-This repository is an educational implementation of a Hartree-Fock (HF) program which can be used for simple quantum chemical calculations.
+This repository is an educational implementation of a Hartree-Fock (HF) program which can be used for simple quantum chemical calculations. The program is mainly written in Python but uses Fortran Code via `f2py` for the evaluation of the integrals.
 
 *Note: The code is **not** optimized! It serves merely as an easy to follow implementation*
 
