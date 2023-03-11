@@ -147,15 +147,15 @@ class SCF:
     
     def overlap_der_matrix(self, center, dim):
         nbf = self.basis.nbf
-        S_der = np.zeros(nbf)
-        for mu in range(1, nbf): # the diagonal is filled with zeros
+        S_der = np.zeros((nbf,nbf))
+        for mu in range(1, nbf):
             for nu in range(mu+1, nbf):
                 if self.basis(mu).center == center:
                     S_der[mu, nu] = SCF.overlap_der_item(self.basis(mu), self.basis(nu), 0, dim)
                 elif self.basis(nu).center == center:
                     S_der[mu, nu] = SCF.overlap_der_item(self.basis(mu), self.basis(nu), 1, dim)
                 else:
-                    S_der[mu, nu] = 0.0 # not necessary, but more explicit
+                    S_der[mu, nu] = 0.0
                 S_der[nu, mu] = S_der[mu, nu]
         return S_der
 
