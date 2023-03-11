@@ -50,6 +50,28 @@ recursive function e(n, m, T, AB, exp1, exp2) result(res)
     end if
 end function e
 
+function e_der(n, m, T, AB, exp1, exp2, center) result(res)
+    implicit none
+    integer, intent(in) :: n, m, T, center
+    real*8, intent(in) :: AB, exp1, exp2
+
+    real*8 :: res, e
+    res = 0.0
+
+    if (center .eq. 0) then
+        res = 2.d0 * exp1 * e(n+1, m, T, AB, exp1, exp2)
+        if (n .gt. 0) then
+            res = res - n * e (n-1, m, T, AB, exp1, exp2)
+        end if
+    else if (center .eq. 1) then
+        res = 2.d0 * exp2 * e(n, m+1, T, AB, exp1, exp2)
+        if (m .gt. 0) then
+            res = res - m * e(n, m-1, T, AB, exp1, exp2)
+        end if
+    end if
+
+end function e_der
+
 recursive function r(t, u, v, n, p, X_PC, Y_PC, Z_PC, R_pc2) result(res)
     implicit none
     integer, intent(in) :: t, u, v, n
@@ -105,6 +127,33 @@ function overlap(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) r
 
 end function overlap
 
+function overlap_der(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, center, dim) result(S_der)
+    implicit none
+    integer, intent(in) :: ng1
+    real*8, dimension(ng1), intent(in) :: coeffs1
+    real*8, dimension(ng1), intent(in) :: exps1
+    integer, dimension(3), intent(in) :: l1
+    real*8, dimension(3), intent(in) :: xyz1
+    integer, intent(in) :: ng2
+    real*8, dimension(ng2), intent(in) :: coeffs2
+    real*8, dimension(ng2), intent(in) :: exps2
+    integer, dimension(3), intent(in) :: l2
+    real*8, dimension(3), intent(in) :: xyz2
+    integer, intent(in) :: center, dim
+
+    real*8 :: S_der, overlap_der_element
+    integer :: i, j
+
+    S_der = 0.0
+    do i=1, ng1
+        do j=1, ng2
+            S_der  = S_der + coeffs1(i) * coeffs2(j) &
+               * overlap_der_element(exps1(i), l1, xyz1, exps2(j), l2, xyz2, center, dim)
+        end do
+    end do
+
+end function overlap_der
+
 function overlap_element(exp1, l1, xyz1, exp2, l2, xyz2) result(S_inner)
     implicit none
     real*8, intent(in) :: exp1
@@ -123,6 +172,35 @@ function overlap_element(exp1, l1, xyz1, exp2, l2, xyz2) result(S_inner)
             * (PI / (exp1 + exp2))**1.50
 
 end function overlap_element
+
+function overlap_der_element(exp1, l1, xyz1, exp2, l2, xyz2, center, dim) result(res)
+    implicit none
+    real*8, intent(in) :: exp1, exp2
+    integer, dimension(3), intent(in) :: l1, l2
+    real*8, dimension(3), intent(in) :: xyz1, xyz2
+    integer, intent(in) :: center, dim
+
+    real*8 :: res, tmp1, tmp2, tmp3, e, e_der
+    real*8 :: PI = 3.14159265358979323846264338327950288419
+    tmp1 = 0.0
+    tmp2 = 0.0
+    tmp3 = 0.0
+    
+    if (dim .eq. 0) then
+        tmp1 = e_der(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2, center)
+        tmp2 = e(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2)
+        tmp3 = e(l1(3), l2(3), 0, xyz1(3)-xyz2(3), exp1, exp2)
+    else if (dim .eq. 1) then
+        tmp1 = e(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2)
+        tmp2 = e_der(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2, center)
+        tmp3 = e(l1(3), l2(3), 0, xyz1(3)-xyz2(3), exp1, exp2)
+    else if (dim .eq. 2) then
+        tmp1 = e(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2)
+        tmp2 = e(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2)
+        tmp3 = e_der(l1(3), l2(3), 0, xyz1(3)-xyz2(3), exp1, exp2, center)
+    end if
+    res = tmp1 * tmp2 * tmp3 * (PI / (exp1 + exp2)) ** 1.50
+end function
 
 function kinetic(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) result(T)
     implicit none
