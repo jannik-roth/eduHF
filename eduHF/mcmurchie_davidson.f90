@@ -234,6 +234,110 @@ function kinetic(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) r
 
 end function kinetic
 
+function kinetic_der_element(exp1, l1, xyz1, exp2, l2, xyz2, center, dim) result(res)
+    implicit none
+    real*8, intent(in) :: exp1, exp2
+    integer, dimension(3), intent(in) :: l1, l2
+    real*8, dimension(3), intent(in) :: xyz1, xyz2
+    integer, intent(in) :: center, dim
+
+    real*8 :: res, kin1, kin2, kin3, e_der, e, tmp
+    real*8 :: PI = 3.14159265358979323846264338327950288419
+
+    ! derivative wrt to the x coordinate
+    if (dim .eq. 0) then
+        kin1 = exp2 * (2.0*l2(1)+1.0) * e_der(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2, center) &
+               - 2.0 * exp2**2 * e_der(l1(1), l2(1)+2, 0, xyz1(1)-xyz2(1), exp1, exp2, center) &
+               - 0.5 * l2(1) * (l2(1)-1.0) * e_der(l1(1), l2(1)-2, 0, xyz1(1)-xyz2(1), exp1, exp2, center)
+    else
+        kin1 = exp2 * (2.0*l2(1)+1.0) * e(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2) &
+               - 2.0 * exp2**2 * e(l1(1), l2(1)+2, 0, xyz1(1)-xyz2(1), exp1, exp2) &
+               - 0.5 * l2(1) * (l2(1)-1.0) * e(l1(1), l2(1)-2, 0, xyz1(1)-xyz2(1), exp1, exp2)
+    end if
+
+    ! derivative wrt to the y coordinate
+    if (dim .eq. 1) then
+        kin2 = exp2 * (2.0*l2(2)+1.0) * e_der(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2, center) &
+               - 2.0 * exp2**2 * e_der(l1(2), l2(2)+2, 0, xyz1(2)-xyz2(2), exp1, exp2, center) &
+               - 0.5 * l2(2) * (l2(2)-1.0) * e_der(l1(2), l2(2)-2, 0, xyz1(2)-xyz2(2), exp1, exp2, center)
+    else
+        kin2 = exp2 * (2.0*l2(2)+1.0) * e(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2) &
+               - 2.0 * exp2**2 * e(l1(2), l2(2)+2, 0, xyz1(2)-xyz2(2), exp1, exp2) &
+               - 0.5 * l2(2) * (l2(2)-1.0) * e(l1(2), l2(2)-2, 0, xyz1(2)-xyz2(2), exp1, exp2)
+    end if
+
+    ! derivative wrt to the z coordinate
+    if (dim .eq. 2) then
+        kin3 = exp2 * (2.0*l2(3)+1.0) * e_der(l1(3), l2(3), 0, xyz1(3)-xyz2(3), exp1, exp2, center) &
+               - 2.0 * exp2**2 * e_der(l1(3), l2(3)+2, 0, xyz1(3)-xyz2(3), exp1, exp2, center) &
+               - 0.5 * l2(3) * (l2(3)-1.0) * e_der(l1(3), l2(3)-2, 0, xyz1(3)-xyz2(3), exp1, exp2, center)
+    else
+        kin3 = exp2 * (2.0*l2(3)+1.0) * e(l1(3), l2(3), 0, xyz1(3)-xyz2(3), exp1, exp2) &
+               - 2.0 * exp2**2 * e(l1(3), l2(3)+2, 0, xyz1(3)-xyz2(3), exp1, exp2) &
+               - 0.5 * l2(3) * (l2(3)-1.0) * e(l1(3), l2(3)-2, 0, xyz1(3)-xyz2(3), exp1, exp2)
+    end if
+
+    if (dim .eq. 0) then
+        tmp = e_der(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2, center)
+        kin2 = kin2 * tmp
+        kin3 = kin3 * tmp
+    else
+        tmp = e(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2)
+        kin2 = kin2 * tmp
+        kin3 = kin3 * tmp
+    end if
+
+    if (dim .eq. 1) then
+        tmp = e_der(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2, center)
+        kin1 = kin1 * tmp
+        kin3 = kin3 * tmp
+    else
+        tmp = e(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2)
+        kin1 = kin1 * tmp
+        kin3 = kin3 * tmp
+    end if
+
+    if (dim .eq. 2) then
+        tmp = e_der(l1(3), l2(3), 0, xyz1(3)-xyz2(3), exp1, exp2, center)
+        kin1 = kin1 * tmp
+        kin2 = kin2 * tmp
+    else
+        tmp = e(l1(3), l2(3), 0, xyz1(3)-xyz2(3), exp1, exp2)
+        kin1 = kin1 * tmp
+        kin2 = kin2 * tmp
+    end if
+  
+    res = (kin1 + kin2 + kin3) * (PI / (exp1 + exp2))**1.50
+
+end function kinetic_der_element
+
+function kinetic_der(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, center, dim) result(T_der)
+    implicit none
+    integer, intent(in) :: ng1
+    real*8, dimension(ng1), intent(in) :: coeffs1
+    real*8, dimension(ng1), intent(in) :: exps1
+    integer, dimension(3), intent(in) :: l1
+    real*8, dimension(3), intent(in) :: xyz1
+    integer, intent(in) :: ng2
+    real*8, dimension(ng2), intent(in) :: coeffs2
+    real*8, dimension(ng2), intent(in) :: exps2
+    integer, dimension(3), intent(in) :: l2
+    real*8, dimension(3), intent(in) :: xyz2
+    integer, intent(in) :: center, dim
+
+    real*8 :: T_der, kinetic_der_element
+    integer :: i, j
+
+    T_der = 0.0
+    do i=1, ng1
+        do j=1, ng2
+            T_der  = T_der + coeffs1(i) * coeffs2(j) &
+                     * kinetic_der_element(exps1(i), l1, xyz1, exps2(j), l2, xyz2, center, dim)
+        end do
+    end do
+
+end function kinetic_der
+
 function potential_1e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, xyza) result(V)
     implicit none
     integer, intent(in) :: ng1

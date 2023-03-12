@@ -150,7 +150,9 @@ class SCF:
         S_der = np.zeros((nbf,nbf))
         for mu in range(nbf):
             for nu in range(mu+1, nbf):
-                if self.basis(mu).center == center:
+                if ((self.basis(mu).center == center) and (self.basis(nu).center == center)):
+                    S_der[mu, nu] = 0.0
+                elif self.basis(mu).center == center:
                     S_der[mu, nu] = SCF.overlap_der_item(self.basis(mu), self.basis(nu), 0, dim)
                 elif self.basis(nu).center == center:
                     S_der[mu, nu] = SCF.overlap_der_item(self.basis(mu), self.basis(nu), 1, dim)
@@ -167,6 +169,22 @@ class SCF:
                 T[mu, nu] = SCF.kinetic_item(self.basis(mu), self.basis(nu))
                 T[nu, mu] = T[mu, nu]
         return T
+    
+    def kinetic_der_matrix(self, center, dim):
+        nbf = self.basis.nbf
+        T_der = np.zeros((nbf,nbf))
+        for mu in range(nbf):
+            for nu in range(mu+1, nbf):
+                if ((self.basis(mu).center == center) and (self.basis(nu).center == center)):
+                    T_der[mu, nu] = 0.0
+                elif self.basis(mu).center == center:
+                    T_der[mu, nu] = SCF.kinetic_der_item(self.basis(mu), self.basis(nu), 0, dim)
+                elif self.basis(nu).center == center:
+                    T_der[mu, nu] = SCF.kinetic_der_item(self.basis(mu), self.basis(nu), 1, dim)
+                else:
+                    T_der[mu, nu] = 0.0
+                T_der[nu, mu] = T_der[mu, nu]
+        return T_der
     
     def potential_1e_matrix(self):
         nbf = self.basis.nbf
@@ -196,6 +214,15 @@ class SCF:
                      bf2 : ContractedGaussianFunction):
         return kinetic(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
                        bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
+    
+    @staticmethod
+    def kinetic_der_item(bf1 : ContractedGaussianFunction,
+                         bf2 : ContractedGaussianFunction,
+                         center : int,
+                         dim : int):
+        return kinetic_der(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
+                           bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
+                           center, dim)
     @staticmethod
     def overlap_item(bf1 : ContractedGaussianFunction,
                      bf2 : ContractedGaussianFunction):
