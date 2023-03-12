@@ -399,6 +399,122 @@ function nuc_attraction(exp1, l1, xyz1, exp2, l2, xyz2, xyza) result(nuc_att)
 
 end function nuc_attraction
 
+function nuc_attraction_der(exp1, l1, xyz1, exp2, l2, xyz2, xyza, dim) result(res)
+    ! Always differentiate the first center !
+    implicit none
+    real*8, intent(in) :: exp1, exp2
+    integer, intent(in) :: l1(3), l2(3), dim
+    real*8, intent(in) :: xyz1(3), xyz2(3), xyza(3)
+
+    real*8 :: p
+    real*8, dimension(3) :: xyzp
+    real*8 :: R_pc2
+    real*8, parameter :: PI = 3.14159265358979323846264338327950288419
+
+    real*8 :: e, e_der, r, res
+    integer :: t, u , v
+
+    p = exp1 + exp2
+    xyzp = (xyz1 * exp1 + xyz2 * exp2) / p
+    R_pc2 = (xyzp(1) - xyza(1))**2 + (xyzp(2) - xyza(2))**2 + (xyzp(3)-xyza(3))**2
+    
+    res = 0.0
+    ! derivative wrt to x
+    if (dim .eq. 0) then
+        do t=0, (l1(1)+l2(1)+1+1)
+            do u=0, (l1(2)+l2(2)+1)
+                do v=0, (l1(3)+l2(3)+1)
+                    res = res + e_der(l1(1), l2(1), t, xyz1(1)-xyz2(1), exp1, exp2, 0) &
+                                * e(l1(2), l2(2), u, xyz1(2)-xyz2(2), exp1, exp2) &
+                                * e(l1(3), l2(3), v, xyz1(3)-xyz2(3), exp1, exp2) &
+                                * r(t, u, v, 0, p, xyzp(1)-xyza(1), xyzp(2)-xyza(2), xyzp(3)-xyza(3), R_pc2)
+                end do
+            end do
+        end do
+    ! derivative wrt to y
+    else if (dim .eq. 1) then
+        do t=0, (l1(1)+l2(1)+1)
+            do u=0, (l1(2)+l2(2)+1+1)
+                do v=0, (l1(3)+l2(3)+1)
+                    res = res + e(l1(1), l2(1), t, xyz1(1)-xyz2(1), exp1, exp2) &
+                                * e_der(l1(2), l2(2), u, xyz1(2)-xyz2(2), exp1, exp2, 0) &
+                                * e(l1(3), l2(3), v, xyz1(3)-xyz2(3), exp1, exp2) &
+                                * r(t, u, v, 0, p, xyzp(1)-xyza(1), xyzp(2)-xyza(2), xyzp(3)-xyza(3), R_pc2)
+                end do
+            end do
+        end do
+    ! derivative wrt to z
+    else if (dim .eq. 2) then
+        do t=0, (l1(1)+l2(1)+1)
+            do u=0, (l1(2)+l2(2)+1)
+                do v=0, (l1(3)+l2(3)+1+1)
+                    res = res + e(l1(1), l2(1), t, xyz1(1)-xyz2(1), exp1, exp2) &
+                                * e(l1(2), l2(2), u, xyz1(2)-xyz2(2), exp1, exp2) &
+                                * e_der(l1(3), l2(3), v, xyz1(3)-xyz2(3), exp1, exp2, 0) &
+                                * r(t, u, v, 0, p, xyzp(1)-xyza(1), xyzp(2)-xyza(2), xyzp(3)-xyza(3), R_pc2)
+                end do
+            end do
+        end do
+    end if
+
+    res = res * 2.0 * PI / p
+end function nuc_attraction_der
+
+function potential_1e_der_ordered(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, xyza, dim) result(V_der)
+    ! always differentiate the first function
+    implicit none
+    integer, intent(in) :: ng1
+    real*8, dimension(ng1), intent(in) :: coeffs1
+    real*8, dimension(ng1), intent(in) :: exps1
+    integer, dimension(3), intent(in) :: l1
+    real*8, dimension(3), intent(in) :: xyz1
+    integer, intent(in) :: ng2
+    real*8, dimension(ng2), intent(in) :: coeffs2
+    real*8, dimension(ng2), intent(in) :: exps2
+    integer, dimension(3), intent(in) :: l2
+    real*8, dimension(3), intent(in) :: xyz2
+    real*8, dimension(3), intent(in) :: xyza
+    integer, intent(in) :: dim
+
+    integer :: i, j
+    real*8 :: V_der, nuc_attraction_der
+
+    V_der = 0.0
+
+    do i=1, ng1
+        do j=1, ng2
+            V_der = V_der + coeffs1(i)*coeffs2(j)*nuc_attraction_der(exps1(i), l1, xyz1, exps2(j), l2,xyz2, xyza, dim)
+        end do
+    end do
+
+end function potential_1e_der_ordered
+
+function potential_1e_der(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, xyza, center, dim) result(V_der)
+    implicit none
+    integer, intent(in) :: ng1
+    real*8, dimension(ng1), intent(in) :: coeffs1
+    real*8, dimension(ng1), intent(in) :: exps1
+    integer, dimension(3), intent(in) :: l1
+    real*8, dimension(3), intent(in) :: xyz1
+    integer, intent(in) :: ng2
+    real*8, dimension(ng2), intent(in) :: coeffs2
+    real*8, dimension(ng2), intent(in) :: exps2
+    integer, dimension(3), intent(in) :: l2
+    real*8, dimension(3), intent(in) :: xyz2
+    real*8, dimension(3), intent(in) :: xyza
+    integer, intent(in) :: center, dim
+
+    real*8 :: V_der, potential_1e_der_ordered
+
+    V_der = 0.0
+    if (center .eq. 0) then
+        V_der = potential_1e_der_ordered(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, xyza, dim)
+    else if (center .eq. 1) then
+        V_der = potential_1e_der_ordered(ng2, coeffs2, exps2, l2, xyz2, ng1, coeffs1, exps1, l1, xyz1, xyza, dim)
+    end if
+
+end function potential_1e_der
+
 function potential_2e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, &
                       ng3, coeffs3, exps3, l3, xyz3, ng4, coeffs4, exps4, l4, xyz4) result(eri)
     implicit none

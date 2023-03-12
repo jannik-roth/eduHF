@@ -195,6 +195,34 @@ class SCF:
                     V[mu, nu] += - at.charge * SCF.potential_1e_item(self.basis(mu), self.basis(nu), at)
                     V[nu, mu] = V[mu, nu]
         return V
+    
+    def potential_1e_der_matrix(self, center, dim):
+        nbf = self.basis.nbf
+        V_der = np.zeros((nbf, nbf))
+        for mu in range(nbf):
+            for nu in range(mu, nbf):
+                for idx, at in enumerate(self.mol.geometry):
+                    if ((self.basis(mu).center == center) and (self.basis(nu).center == center) and (idx == center)):
+                        # all at the same center
+                        V_der[mu, nu] += 0.0
+                    elif ((self.basis(mu).center == center) and (idx == center)):
+                        V_der[mu, nu] -= -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
+                    elif ((self.basis(nu).center == center) and (idx == center)):
+                        V_der[mu, nu] -= -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
+                    elif ((self.basis(mu).center == center) and (self.basis(nu).center == center)):
+                        V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
+                        V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
+                    elif (idx == center):
+                        # use chain rule, factor 2.0 because we differentiate wrt to mu AND nu
+                        V_der[mu, nu] -= -2.0 * at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
+                    elif (self.basis(mu).center == center):
+                        V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
+                    elif (self.basis(nu).center == center):
+                        V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
+                    else:
+                        V_der[mu, nu] += 0.0
+                V_der[nu, mu] = V_der[mu, nu]
+        return V_der
 
     def potential_2e_tensor(self):
         nbf = self.basis.nbf
@@ -243,6 +271,16 @@ class SCF:
         return potential_1e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, 
                             bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
                             at.xyz)
+    
+    @staticmethod
+    def potential_1e_der_item(bf1 : ContractedGaussianFunction,
+                              bf2 : ContractedGaussianFunction,
+                              at : Atom,
+                              center : int,
+                              dim : int):
+        return potential_1e_der(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, 
+                                bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
+                                at.xyz, center, dim)
     @staticmethod
     def potential_2e_item(bf1 : ContractedGaussianFunction,
                           bf2 : ContractedGaussianFunction,
