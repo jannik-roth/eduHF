@@ -50,6 +50,18 @@ class Molecule:
                 res += self.geometry[a].charge * self.geometry[b].charge * 1.0/(self._distance(a, b))
         return res
     
+    def core_potential_der(self, center, dim):
+        res = 0.0
+        for b in range(self.nofatoms):
+            if not (center == b):
+                if (dim == 0):
+                    res += self.geometry[b].charge * (self.geometry[b].xyz[0] - self.geometry[center].xyz[0]) / self._distance(center, b)**3.0
+                elif (dim == 1):
+                    res += self.geometry[b].charge * (self.geometry[b].xyz[1] - self.geometry[center].xyz[1]) / self._distance(center, b)**3.0
+                elif (dim == 2):
+                    res += self.geometry[b].charge * (self.geometry[b].xyz[2] - self.geometry[center].xyz[2]) / self._distance(center, b)**3.0
+        res *= self.geometry[center].charge
+        return res
     def _distance(self, a : int, b : int):
         xyza = self.geometry[a].xyz
         xyzb = self.geometry[b].xyz
