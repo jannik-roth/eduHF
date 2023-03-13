@@ -237,6 +237,73 @@ class SCF:
                                                                            self.basis(sigma))
         return eris
     
+    def potential_2e_der_tensor(self, center, dim):
+        nbf = self.basis.nbf
+        eris_der = np.zeros((nbf, nbf, nbf, nbf))
+        for mu in range(nbf):
+            for nu in range(nbf):
+                for lamda in range(nbf):
+                    for sigma in range(nbf):
+                        if ((center == self.basis(mu).center) + (center == self.basis(nu).center)
+                             + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) == 0):
+                            eris_der[mu, nu, lamda, sigma] = 0.0
+                        elif ((center == self.basis(mu).center) + (center == self.basis(nu).center)
+                             + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) == 4):
+                            eris_der[mu, nu, lamda, sigma] = 0.0
+                        elif ((center == self.basis(mu).center) + (center == self.basis(nu).center)
+                             + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) == 3):
+                            if not (center == self.basis(mu).center):
+                                eris_der[mu, nu, lamda, sigma] -= SCF.potential_2e_der_item(self.basis(mu),
+                                                                                            self.basis(nu),
+                                                                                            self.basis(lamda),
+                                                                                            self.basis(sigma),
+                                                                                            0, dim)
+                            elif not (center == self.basis(nu).center):
+                                eris_der[mu, nu, lamda, sigma] -= SCF.potential_2e_der_item(self.basis(mu),
+                                                                                            self.basis(nu),
+                                                                                            self.basis(lamda),
+                                                                                            self.basis(sigma),
+                                                                                            1, dim)
+                            elif not (center == self.basis(lamda).center):
+                                eris_der[mu, nu, lamda, sigma] -= SCF.potential_2e_der_item(self.basis(mu),
+                                                                                            self.basis(nu),
+                                                                                            self.basis(lamda),
+                                                                                            self.basis(sigma),
+                                                                                            2, dim)
+                            elif not (center == self.basis(sigma).center):
+                                eris_der[mu, nu, lamda, sigma] -= SCF.potential_2e_der_item(self.basis(mu),
+                                                                                            self.basis(nu),
+                                                                                            self.basis(lamda),
+                                                                                            self.basis(sigma),
+                                                                                            3, dim)
+                        elif ((center == self.basis(mu).center) + (center == self.basis(nu).center)
+                             + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) <= 2):
+                            if (center == self.basis(mu).center):
+                                eris_der[mu, nu, lamda, sigma] += SCF.potential_2e_der_item(self.basis(mu),
+                                                                                            self.basis(nu),
+                                                                                            self.basis(lamda),
+                                                                                            self.basis(sigma),
+                                                                                            0, dim)
+                            if (center == self.basis(nu).center):
+                                eris_der[mu, nu, lamda, sigma] += SCF.potential_2e_der_item(self.basis(mu),
+                                                                                            self.basis(nu),
+                                                                                            self.basis(lamda),
+                                                                                            self.basis(sigma),
+                                                                                            1, dim)
+                            if (center == self.basis(lamda).center):
+                                eris_der[mu, nu, lamda, sigma] += SCF.potential_2e_der_item(self.basis(mu),
+                                                                                            self.basis(nu),
+                                                                                            self.basis(lamda),
+                                                                                            self.basis(sigma),
+                                                                                            2, dim)
+                            if (center == self.basis(sigma).center):
+                                eris_der[mu, nu, lamda, sigma] += SCF.potential_2e_der_item(self.basis(mu),
+                                                                                            self.basis(nu),
+                                                                                            self.basis(lamda),
+                                                                                            self.basis(sigma),
+                                                                                            3, dim)
+        return eris_der
+    
     @staticmethod
     def kinetic_item(bf1 : ContractedGaussianFunction,
                      bf2 : ContractedGaussianFunction):
@@ -290,3 +357,16 @@ class SCF:
                             bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
                             bf3.coeffs, bf3.alphas, bf3.l_vec, bf3.xyz,
                             bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz)
+    
+    @staticmethod
+    def potential_2e_der_item(bf1 : ContractedGaussianFunction,
+                              bf2 : ContractedGaussianFunction,
+                              bf3 : ContractedGaussianFunction,
+                              bf4 : ContractedGaussianFunction,
+                              center : int,
+                              dim : int):
+        return potential_2e_der(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
+                                bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
+                                bf3.coeffs, bf3.alphas, bf3.l_vec, bf3.xyz,
+                                bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz,
+                                center, dim)

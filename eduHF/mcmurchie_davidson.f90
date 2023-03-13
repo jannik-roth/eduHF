@@ -586,3 +586,164 @@ function electron_repulsion(exp1, l1, xyz1, exp2, l2, xyz2, exp3, l3, xyz3, exp4
 
     el_rep = el_rep * 2 * PI ** (2.50) / (p * q * sqrt(p + q))
 end function electron_repulsion
+
+function electron_repulsion_der(exp1, l1, xyz1, exp2, l2, xyz2, exp3, l3, xyz3, exp4, l4, xyz4, dim) result(res)
+    ! always differentiate the first bf
+    implicit none
+    real*8, intent(in) :: exp1, exp2, exp3, exp4
+    integer, dimension(3), intent(in) :: l1, l2, l3, l4
+    real*8, dimension(3), intent(in) :: xyz1, xyz2, xyz3, xyz4
+    integer, intent(in) :: dim
+
+    real*8 :: p, q, R_pq2, e, e_der, r, res
+    real*8, dimension(3) :: xyzp, xyzq
+    integer :: t, u, v, tau, nu, phi
+    real*8, parameter :: PI = 3.14159265358979323846264338327950288419
+
+    p = exp1 +exp2
+    q = exp3 + exp4
+    xyzp = (exp1 * xyz1 + exp2 * xyz2) / p
+    xyzq = (exp3 * xyz3 + exp4 * xyz4) / q
+    R_pq2 = (xyzp(1) - xyzq(1))**2 + (xyzp(2) - xyzq(2))**2 + (xyzp(3) - xyzq(3))**2
+
+    res = 0.0
+    ! differentiate wrt to x
+    if (dim .eq. 0) then
+        do t=0, (l1(1)+l2(1)+1)
+            do u=0, (l1(2)+l2(2))
+                do v=0, (l1(3)+l2(3))
+                    do tau=0, (l3(1)+l4(1))
+                        do nu=0, (l3(2)+l4(2))
+                            do phi=0, (l3(3)+l4(3))
+                                res = res + e_der(l1(1), l2(1), t, xyz1(1)-xyz2(1), exp1, exp2, 0) &
+                                            * e(l1(2), l2(2), u, xyz1(2)-xyz2(2), exp1, exp2) &
+                                            * e(l1(3), l2(3), v, xyz1(3)-xyz2(3), exp1, exp2) &
+                                            * e(l3(1), l4(1), tau, xyz3(1)-xyz4(1), exp3, exp4) &
+                                            * e(l3(2), l4(2), nu, xyz3(2)-xyz4(2), exp3, exp4) &
+                                            * e(l3(3), l4(3), phi, xyz3(3)-xyz4(3), exp3, exp4) &
+                                            * r(t+tau, u+nu, v+phi, 0, p*q/(p+q), &
+                                                xyzp(1)-xyzq(1), xyzp(2)-xyzq(2), xyzp(3)-xyzq(3), R_pq2) &
+                                            * (-1.0)**(tau + nu + phi)
+                                
+                            end do
+                        end do
+                    end do
+                end do
+            end do
+        end do
+    ! differentiate wrt to y
+    else if (dim .eq. 1) then
+        do t=0, (l1(1)+l2(1))
+            do u=0, (l1(2)+l2(2)+1)
+                do v=0, (l1(3)+l2(3))
+                    do tau=0, (l3(1)+l4(1))
+                        do nu=0, (l3(2)+l4(2))
+                            do phi=0, (l3(3)+l4(3))
+                                res = res + e(l1(1), l2(1), t, xyz1(1)-xyz2(1), exp1, exp2) &
+                                            * e_der(l1(2), l2(2), u, xyz1(2)-xyz2(2), exp1, exp2, 0) &
+                                            * e(l1(3), l2(3), v, xyz1(3)-xyz2(3), exp1, exp2) &
+                                            * e(l3(1), l4(1), tau, xyz3(1)-xyz4(1), exp3, exp4) &
+                                            * e(l3(2), l4(2), nu, xyz3(2)-xyz4(2), exp3, exp4) &
+                                            * e(l3(3), l4(3), phi, xyz3(3)-xyz4(3), exp3, exp4) &
+                                            * r(t+tau, u+nu, v+phi, 0, p*q/(p+q), &
+                                                xyzp(1)-xyzq(1), xyzp(2)-xyzq(2), xyzp(3)-xyzq(3), R_pq2) &
+                                            * (-1.0)**(tau + nu + phi)
+                            end do
+                        end do
+                    end do
+                end do
+            end do
+        end do
+    ! differentiate wrt to z
+    else if (dim .eq. 2) then
+        do t=0, (l1(1)+l2(1))
+            do u=0, (l1(2)+l2(2))
+                do v=0, (l1(3)+l2(3)+1)
+                    do tau=0, (l3(1)+l4(1))
+                        do nu=0, (l3(2)+l4(2))
+                            do phi=0, (l3(3)+l4(3))
+                                res = res + e(l1(1), l2(1), t, xyz1(1)-xyz2(1), exp1, exp2) &
+                                            * e(l1(2), l2(2), u, xyz1(2)-xyz2(2), exp1, exp2) &
+                                            * e_der(l1(3), l2(3), v, xyz1(3)-xyz2(3), exp1, exp2, 0) &
+                                            * e(l3(1), l4(1), tau, xyz3(1)-xyz4(1), exp3, exp4) &
+                                            * e(l3(2), l4(2), nu, xyz3(2)-xyz4(2), exp3, exp4) &
+                                            * e(l3(3), l4(3), phi, xyz3(3)-xyz4(3), exp3, exp4) &
+                                            * r(t+tau, u+nu, v+phi, 0, p*q/(p+q), &
+                                                xyzp(1)-xyzq(1), xyzp(2)-xyzq(2), xyzp(3)-xyzq(3), R_pq2) &
+                                            * (-1.0)**(tau + nu + phi)
+                            end do
+                        end do
+                    end do
+                end do
+            end do
+        end do
+    end if
+
+    res = res * 2.0 * PI**2.50 / (p * q * sqrt(p + q))
+
+end function electron_repulsion_der
+
+function potential_2e_der_ordered(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, &
+                                  ng3, coeffs3, exps3, l3, xyz3, ng4, coeffs4, exps4, l4, xyz4, &
+                                  dim) result(res)
+    implicit none
+    integer, intent(in) :: ng1, ng2, ng3, ng4
+    real*8, intent(in) :: coeffs1(ng1), coeffs2(ng2), coeffs3(ng3), coeffs4(ng4)
+    real*8, intent(in) :: exps1(ng1), exps2(ng2), exps3(ng3), exps4(ng4)
+    integer, dimension(3), intent(in) :: l1, l2, l3, l4
+    real*8, dimension(3), intent(in) :: xyz1, xyz2, xyz3, xyz4
+    integer, intent(in) :: dim
+
+    real*8 :: res, electron_repulsion_der
+    integer :: i, j, k, l
+
+    res = 0.0
+
+    do i=1, ng1
+        do j=1, ng2
+            do k=1, ng3
+                do l=1, ng4
+                    res = res + coeffs1(i) * coeffs2(j) * coeffs3(k) * coeffs4(l) &
+                                * electron_repulsion_der(exps1(i), l1, xyz1, exps2(j), l2, xyz2, &
+                                                         exps3(k), l3, xyz3, exps4(l), l4, xyz4, &
+                                                         dim)
+                end do
+            end do
+        end do
+    end do
+
+end function potential_2e_der_ordered
+
+function potential_2e_der(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, &
+                          ng3, coeffs3, exps3, l3, xyz3, ng4, coeffs4, exps4, l4, xyz4, &
+                          center, dim) result(res)
+    implicit none
+    integer, intent(in) :: ng1, ng2, ng3, ng4
+    real*8, intent(in) :: coeffs1(ng1), coeffs2(ng2), coeffs3(ng3), coeffs4(ng4)
+    real*8, intent(in) :: exps1(ng1), exps2(ng2), exps3(ng3), exps4(ng4)
+    integer, dimension(3), intent(in) :: l1, l2, l3, l4
+    real*8, dimension(3), intent(in) :: xyz1, xyz2, xyz3, xyz4
+    integer, intent(in) :: center, dim
+
+    real*8 :: res, potential_2e_der_ordered
+
+    res = 0.0
+
+    if (center .eq. 0) then
+        res = potential_2e_der_ordered(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, &
+                                       ng3, coeffs3, exps3, l3, xyz3, ng4, coeffs4, exps4, l4, xyz4, &
+                                       dim)
+    else if (center .eq. 1) then 
+        res = potential_2e_der_ordered(ng2, coeffs2, exps2, l2, xyz2, ng1, coeffs1, exps1, l1, xyz1, &
+                                       ng4, coeffs4, exps4, l4, xyz4, ng3, coeffs3, exps3, l3, xyz3, &
+                                       dim)
+    else if (center .eq. 2) then 
+        res = potential_2e_der_ordered(ng3, coeffs3, exps3, l3, xyz3, ng4, coeffs4, exps4, l4, xyz4, &
+                                       ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, &
+                                       dim)
+    else if (center .eq. 3) then
+        res = potential_2e_der_ordered(ng4, coeffs4, exps4, l4, xyz4, ng3, coeffs3, exps3, l3, xyz3, &
+                                       ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2, &
+                                       dim)
+    end if
+end function potential_2e_der
