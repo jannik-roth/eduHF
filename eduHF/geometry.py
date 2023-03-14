@@ -38,7 +38,6 @@ class Molecule:
         for atom in self.geometry:
             self.noe += atom.charge
         self.noe -= self.charge
-        self.core_pot = self.core_potential()
 
     def list_atom_types(self):
         return set([atom.symbol for atom in self.geometry])
@@ -62,6 +61,7 @@ class Molecule:
                     res += self.geometry[b].charge * (self.geometry[b].xyz[2] - self.geometry[center].xyz[2]) / self._distance(center, b)**3.0
         res *= self.geometry[center].charge
         return res
+    
     def _distance(self, a : int, b : int):
         xyza = self.geometry[a].xyz
         xyzb = self.geometry[b].xyz

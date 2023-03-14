@@ -33,6 +33,7 @@ class SCF:
         self.max_iter = max_iter
         self.convergence_type = convergence_type
         self.convergence_crit = convergence_crit
+        self.mol.core_pot = self.mol.core_potential()
         
         if not self.setup_int:
             raise ValueError(f"Integrals are not set up! Please run {self.__class__.__name__}.setup_int() before running the SCF procedure")
@@ -70,6 +71,38 @@ class SCF:
         
         if self.converged == False:
             self.print_not_conv_info()
+
+    def get_gradient(self):
+        # check converged
+        Q = self.build_Q()
+        grad = np.zeros((self.mol.nofatoms * 3))
+
+        for at in range(self.mol.nofatoms):
+            for dim in range(3):
+                grad[at * 3 + dim] = self.get_derivative(at, dim, Q)
+        return grad
+
+    def get_derivative(self, atom, dim, Q):
+        H_core_d = self.kinetic_der_matrix(atom, dim) + self.potential_1e_der_matrix(atom, dim)
+        ERIS_d = self.potential_2e_der_tensor(atom, dim)
+        S_d = self.overlap_der_matrix(atom, dim)
+        core_pot_d = self.mol.core_potential_der(atom, dim)
+
+        der = (np.einsum('nm,mn', self.P, H_core_d) 
+               + 0.5 * (np.einsum('nm,ls,mnsl', self.P, self.P, ERIS_d) - 0.5 * np.einsum('nm,ls,mlsn', self.P, self.P, ERIS_d)) 
+               - np.einsum('nm,mn', Q, S_d)
+               + core_pot_d)
+        return der
+
+    def build_Q(self):
+        nbf = self.basis.nbf
+        Q = np.zeros((nbf, nbf))
+        for mu in range(nbf):
+            for nu in range(nbf):
+                for i in range(int(self.mol.noe / 2)):
+                    Q[mu, nu] += self.epsilons[i] * self.C[mu, i] * self.C[nu, i]
+        Q *= 2
+        return Q
 
     def print_scf_setup(self):
         print("#"*self.print_width)
@@ -193,7 +226,7 @@ class SCF:
             for nu in range(mu, nbf):
                 for at in self.mol.geometry:
                     V[mu, nu] += - at.charge * SCF.potential_1e_item(self.basis(mu), self.basis(nu), at)
-                    V[nu, mu] = V[mu, nu]
+                V[nu, mu] = V[mu, nu]
         return V
     
     def potential_1e_der_matrix(self, center, dim):
@@ -213,8 +246,8 @@ class SCF:
                         V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
                         V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
                     elif (idx == center):
-                        # use chain rule, factor 2.0 because we differentiate wrt to mu AND nu
-                        V_der[mu, nu] -= -2.0 * at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
+                        V_der[mu, nu] -= -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
+                        V_der[mu, nu] -= -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
                     elif (self.basis(mu).center == center):
                         V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
                     elif (self.basis(nu).center == center):
