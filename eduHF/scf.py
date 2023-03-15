@@ -25,27 +25,121 @@ class SCF:
 
         self.print_width = 60
 
+    def geom_opt(self,
+                 max_iter_geom : int = 50,
+                 opt_method : str = 'gd',
+                 convergence_crit_geom : float = 1e-5,
+                 convergence_type_geom : str = 'rms',
+                 info : int = 10,
+                 scf_params : dict = {'info' : 1},
+                 opt_method_params : dict = {}):
+        
+        self.max_iter_geom = max_iter_geom
+        self.opt_method = opt_method
+        self.convergence_crit_geom = convergence_crit_geom
+        self.convergence_type_geom = convergence_type_geom
+        self.req_iterations_geom = None
+        self.converged_geom = False
+
+        if info > 5:
+            self.print_geom_opt_setup()
+
+        for iter in range(self.max_iter_geom):
+            if info > 7:
+                self.print_geom_opt_step(iter)
+            self.prepare_integrals()
+            self.run_scf(**scf_params)
+            self.grad = self.get_gradient()
+
+            self.converged_geom, error = self.check_convergence_geom()
+
+            if info > 7:
+                self.print_grad_error(error)
+
+            if self.converged_geom:
+                if info > 1:
+                    self.req_iterations_geom = iter
+                    self.print_conv_geom_info(error)
+                break
+            
+            step = self.build_step(**opt_method_params)
+            self.make_step(step)
+
+    def print_conv_geom_info(self, error):
+        print("#"*self.print_width)
+        print(f"GEOM OPT CONVERGED".center(self.print_width))
+        print(f'req. {self.req_iterations_geom} iterations'.center(self.print_width))
+        print("#"*self.print_width)
+
+    def print_grad_error(self, error):
+        print(f"Current Gradient".center(self.print_width))
+        print("{:<10} {:<10} {:<10} {:<10}".format('symbol','x','y', 'z'))
+        for idx, at in enumerate(self.mol.geometry):
+            print("{:<10} {:<10} {:<10} {:<10}".format(at.symbol, f"{self.grad[idx*3]:.7f}", f"{self.grad[idx*3+1]:.7f}", f"{self.grad[idx*3+2]:.7f}"))
+        print(f"Error in geom opt: {error:e}")
+
+    def print_geom_opt_step(self, iter):
+        print("#"*self.print_width)
+        print(f"GEOM OPT ITER {iter}".center(self.print_width))
+        print(f"Current Geometry".center(self.print_width))
+        self.print_mol(self.mol)
+
+    @staticmethod
+    def print_mol(mol):
+        print("{:<10} {:<10} {:<10} {:<10}".format('symbol','x','y', 'z'))
+        for at in mol.geometry:
+            print("{:<10} {:<10} {:<10} {:<10}".format(at.symbol, f"{at.xyz[0]:.7f}", f"{at.xyz[1]:.7f}", f"{at.xyz[2]:.7f}"))
+
+
+    def print_geom_opt_setup(self):
+        print("#"*self.print_width)
+        print("Geom opt setup".center(self.print_width))
+        print("#"*self.print_width)
+        print(f"  max_iter_geom          -> {self.max_iter_geom}")
+        print(f"  opt_method             -> {self.opt_method}")
+        print(f"  convergence_crit_geom  -> {self.convergence_crit_geom:e}")
+        print(f"  convergence_type_geom  -> {self.convergence_type_geom}")
+        print("Starting geom opt now".center(self.print_width))
+        print("#"*self.print_width)
+            
+    def make_step(self, step):
+        for at in range(self.mol.nofatoms):
+            self.mol.geometry[at].xyz += step[at*3:at*3+3]
+
+    def build_step(self, **kwargs):
+        if self.opt_method == 'gd':
+            alpha = kwargs.get('alpha', 1.0)
+            return - alpha * self.grad
+
+    def check_convergence_geom(self):
+        if self.convergence_type_geom == 'rms':
+            rms = np.linalg.norm(self.grad)
+            return rms < self.convergence_crit_geom, rms
+
     def run_scf(self, 
                 max_iter : int = 50,
                 convergence_crit : float = 1e-6,
-                convergence_type : str = 'com'):
+                convergence_type : str = 'com',
+                info : int = 10):
         
         self.max_iter = max_iter
         self.convergence_type = convergence_type
         self.convergence_crit = convergence_crit
+        self.info = info
         self.mol.core_pot = self.mol.core_potential()
         
         if not self.setup_int:
             raise ValueError(f"Integrals are not set up! Please run {self.__class__.__name__}.setup_int() before running the SCF procedure")
-            return
         
-        self.print_scf_setup()
+        if info > 5:
+            self.print_scf_setup()
         
         # get X = S^(-1/2)
         self.obtain_X()
         self.inital_Fock_guess(type='zero density')
 
-        print("{:<10} {:<15} {:<15} {:<10}".format('iteration','energy','error', 'converged'))
+        if info > 7:
+            print("{:<10} {:<15} {:<15} {:<10}".format('iteration','energy','error', 'converged'))
         
         for i in range(self.max_iter):
             # F' = X^T F X
@@ -62,15 +156,18 @@ class SCF:
             self.scf_energy = self.calc_HF_energy()
 
             self.converged, self.error = self.check_convergence()
-            print("{:<10} {:<15} {:<15} {:<10}".format(i, f"{self.scf_energy:,.7e}", f"{self.error:,.7e}", str(self.converged)))
+            if info > 7:
+                print("{:<10} {:<15} {:<15} {:<10}".format(i, f"{self.scf_energy:,.7e}", f"{self.error:,.7e}", str(self.converged)))
 
             if self.converged:
                 self.req_iterations = i
-                self.print_conv_info()
+                if info > 1:
+                    self.print_conv_info()
                 break
         
         if self.converged == False:
-            self.print_not_conv_info()
+            if info > 0:
+                self.print_not_conv_info()
 
     def get_gradient(self):
         # check converged
@@ -89,7 +186,8 @@ class SCF:
         core_pot_d = self.mol.core_potential_der(atom, dim)
 
         der = (np.einsum('nm,mn', self.P, H_core_d) 
-               + 0.5 * (np.einsum('nm,ls,mnsl', self.P, self.P, ERIS_d) - 0.5 * np.einsum('nm,ls,mlsn', self.P, self.P, ERIS_d)) 
+               + 0.5 * (np.einsum('nm,ls,mnsl', self.P, self.P, ERIS_d) 
+                        - 0.5 * np.einsum('nm,ls,mlsn', self.P, self.P, ERIS_d)) 
                - np.einsum('nm,mn', Q, S_d)
                + core_pot_d)
         return der
