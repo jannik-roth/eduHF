@@ -59,13 +59,14 @@ class SCF:
             if self.converged_geom:
                 if info > 1:
                     self.req_iterations_geom = iter
-                    self.print_conv_geom_info(error)
+                    self.print_conv_geom_info()
                 break
             
-            step = self.build_step(**opt_method_params)
+            step = self.build_step(iter, **opt_method_params)
+            print(step)
             self.make_step(step)
 
-    def print_conv_geom_info(self, error):
+    def print_conv_geom_info(self):
         print("#"*self.print_width)
         print(f"GEOM OPT CONVERGED".center(self.print_width))
         print(f'req. {self.req_iterations_geom} iterations'.center(self.print_width))
@@ -106,10 +107,24 @@ class SCF:
         for at in range(self.mol.nofatoms):
             self.mol.geometry[at].xyz += step[at*3:at*3+3]
 
-    def build_step(self, **kwargs):
+    def build_step(self, iter, **kwargs):
         if self.opt_method == 'gd':
             alpha = kwargs.get('alpha', 1.0)
             return - alpha * self.grad
+        if self.opt_method == 'bfgs':
+            if iter == 0:
+                self.inv_hessian = np.eye(len(self.grad))
+            else:
+                diff_grad = self.grad - self.grad_old 
+                tmp = np.eye((len(self.grad))) - np.outer(self.step_old, diff_grad) / np.dot(self.step_old, diff_grad)
+                self.inv_hessian = tmp @ self.inv_hessian @ tmp.T  + np.outer(self.step_old, self.step_old) / np.dot(self.step_old, diff_grad)       
+
+            alpha = kwargs.get('alpha', 1.0)
+            self.step = - alpha * self.inv_hessian @ self.grad
+            self.grad_old = self.grad
+            self.step_old = self.step
+
+            return self.step
 
     def check_convergence_geom(self):
         if self.convergence_type_geom == 'rms':
