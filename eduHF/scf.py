@@ -135,13 +135,18 @@ class SCF:
                 max_iter : int = 50,
                 convergence_crit : float = 1e-6,
                 convergence_type : str = 'com',
-                info : int = 10):
+                info : int = 10,
+                diis : bool = True,
+                diis_size : int = 6):
         
         self.max_iter = max_iter
         self.convergence_type = convergence_type
         self.convergence_crit = convergence_crit
         self.info = info
         self.mol.core_pot = self.mol.core_potential()
+        self.diis = diis
+        self.diis_size = diis_size
+
         
         if not self.setup_int:
             raise ValueError(f"Integrals are not set up! Please run {self.__class__.__name__}.setup_int() before running the SCF procedure")
@@ -152,13 +157,12 @@ class SCF:
         # get X = S^(-1/2)
         self.obtain_X()
         self.inital_Fock_guess(type='zero density')
+        self.F_prime = self.X.T @ self.F @ self.X
 
         if info > 7:
             print("{:<10} {:<15} {:<15} {:<10}".format('iteration','energy','error', 'converged'))
         
         for i in range(self.max_iter):
-            # F' = X^T F X
-            self.F_prime = self.X.T @ self.F @ self.X
             # C' F' = C' epsilon
             self.epsilons, C_prime = np.linalg.eigh(self.F_prime)
             # C = X C'
@@ -179,10 +183,53 @@ class SCF:
                 if info > 1:
                     self.print_conv_info()
                 break
-        
+
+            # F' = X^T F X
+            self.F_prime = self.X.T @ self.F @ self.X
+
+            if self.diis == True:
+                self.save_fock_prime(i)
+                self.diis_build_Fock_prime()
+                
         if self.converged == False:
             if info > 0:
                 self.print_not_conv_info()
+
+    def diis_build_Fock_prime(self):
+        current_diis_size = self.diis_error_com.size
+        if current_diis_size > 2:
+            B = -1.0 * np.ones((current_diis_size + 1, current_diis_size + 1))
+            B[-1, -1] = 0.0
+            for i in range(current_diis_size):
+                for j in range(i, current_diis_size):
+                    B[i, j] = np.trace(self.diis_error_mat_save[i,:,:].T @ self.diis_error_mat_save[j,:,:])
+                    B[j, i] = B[i, j]
+                
+            rhs = np.zeros(current_diis_size + 1)
+            rhs[-1] = -1.0
+            sol = np.linalg.solve(B, rhs)
+
+            self.F_prime = np.einsum('i,ijk', sol[:-1], self.diis_fock_save)
+
+
+    def save_fock_prime(self, i):
+        if i == 0:
+            self.diis_fock_save = np.zeros((0, self.basis.nbf, self.basis.nbf))
+            self.diis_error_mat_save = np.zeros((0, self.basis.nbf, self.basis.nbf))
+            self.diis_error_com = np.zeros(0)
+        else:
+            err_mat = self.X.T @ (self.F @ self.P @ self.S - self.S @ self.P @ self.F) @ self.X
+            err_com = np.linalg.norm(err_mat)
+
+            if self.diis_error_com.shape[0] < self.diis_size:
+                self.diis_fock_save = np.vstack((self.diis_fock_save, self.F_prime[None]))
+                self.diis_error_mat_save = np.vstack((self.diis_error_mat_save, err_mat[None]))
+                self.diis_error_com = np.append(self.diis_error_com, err_com)
+            else:
+                idx_to_replace = np.argmax(self.diis_error_com)
+                self.diis_fock_save[idx_to_replace] = self.F_prime
+                self.diis_error_mat_save[idx_to_replace] = err_mat
+                self.diis_error_com[idx_to_replace] = err_com            
 
     def get_gradient(self):
         # check converged
