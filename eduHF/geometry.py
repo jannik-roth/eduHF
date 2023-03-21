@@ -46,7 +46,7 @@ class Molecule:
         res = 0.0
         for a in range(self.nofatoms):
             for b in range(a+1, self.nofatoms):
-                res += self.geometry[a].charge * self.geometry[b].charge * 1.0/(self._distance(a, b))
+                res += self.geometry[a].charge * self.geometry[b].charge * 1.0/(self.distance(a, b))
         return res
     
     def core_potential_der(self, center, dim):
@@ -54,15 +54,29 @@ class Molecule:
         for b in range(self.nofatoms):
             if not (center == b):
                 if (dim == 0):
-                    res += self.geometry[b].charge * (self.geometry[b].xyz[0] - self.geometry[center].xyz[0]) / self._distance(center, b)**3.0
+                    res += self.geometry[b].charge * (self.geometry[b].xyz[0] - self.geometry[center].xyz[0]) / self.distance(center, b)**3.0
                 elif (dim == 1):
-                    res += self.geometry[b].charge * (self.geometry[b].xyz[1] - self.geometry[center].xyz[1]) / self._distance(center, b)**3.0
+                    res += self.geometry[b].charge * (self.geometry[b].xyz[1] - self.geometry[center].xyz[1]) / self.distance(center, b)**3.0
                 elif (dim == 2):
-                    res += self.geometry[b].charge * (self.geometry[b].xyz[2] - self.geometry[center].xyz[2]) / self._distance(center, b)**3.0
+                    res += self.geometry[b].charge * (self.geometry[b].xyz[2] - self.geometry[center].xyz[2]) / self.distance(center, b)**3.0
         res *= self.geometry[center].charge
         return res
     
-    def _distance(self, a : int, b : int):
+    def distance(self, a : int, b : int):
         xyza = self.geometry[a].xyz
         xyzb = self.geometry[b].xyz
         return np.sqrt(np.sum((xyza - xyzb)**2))
+    
+    def angle(self, a : int, b : int, c : int):
+        xyz1 = self.geometry[a].xyz - self.geometry[b].xyz
+        xyz2 = self.geometry[c].xyz - self.geometry[b].xyz
+        xyz1_u = xyz1 / np.linalg.norm(xyz1)
+        xyz2_u = xyz2 / np.linalg.norm(xyz2)
+        return 180.0 / np.pi * np.arccos(np.clip(np.dot(xyz1_u, xyz2_u), -1.0, 1.0))
+
+    
+    @staticmethod
+    def print_mol(mol):
+        print("{:<10} {:<10} {:<10} {:<10}".format('symbol','x','y', 'z'))
+        for at in mol.geometry:
+            print("{:<10} {:<10} {:<10} {:<10}".format(at.symbol, f"{at.xyz[0]:.7f}", f"{at.xyz[1]:.7f}", f"{at.xyz[2]:.7f}"))

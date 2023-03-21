@@ -24,6 +24,11 @@ class SCF:
         self.converged = False
 
         self.print_width = 60
+        
+        if self.mol.noe % 2 == 1:
+            raise ValueError((f"Number of electrons in the molecule is {self.mol.noe} and therefore uneven."
+                              " The current code does NOT provide unrestricted calculations"))
+
 
     def geom_opt(self,
                  max_iter_geom : int = 50,
@@ -63,8 +68,16 @@ class SCF:
                 break
             
             step = self.build_step(iter, **opt_method_params)
-            print(step)
             self.make_step(step)
+
+        if self.converged_geom == False:
+            if info > 0:
+                self.print_not_conv_info_geom()
+
+    def print_not_conv_info_geom(self):
+        print("#"*self.print_width)
+        print(f'    GEOM OPT did NOT converge after {self.max_iter_geom} iterations'.center(self.print_width))
+        print("#"*self.print_width)
 
     def print_conv_geom_info(self):
         print("#"*self.print_width)
@@ -73,6 +86,7 @@ class SCF:
         print("#"*self.print_width)
 
     def print_grad_error(self, error):
+        print("#"*self.print_width)
         print(f"Current Gradient".center(self.print_width))
         print("{:<10} {:<10} {:<10} {:<10}".format('symbol','x','y', 'z'))
         for idx, at in enumerate(self.mol.geometry):
@@ -83,14 +97,7 @@ class SCF:
         print("#"*self.print_width)
         print(f"GEOM OPT ITER {iter}".center(self.print_width))
         print(f"Current Geometry".center(self.print_width))
-        self.print_mol(self.mol)
-
-    @staticmethod
-    def print_mol(mol):
-        print("{:<10} {:<10} {:<10} {:<10}".format('symbol','x','y', 'z'))
-        for at in mol.geometry:
-            print("{:<10} {:<10} {:<10} {:<10}".format(at.symbol, f"{at.xyz[0]:.7f}", f"{at.xyz[1]:.7f}", f"{at.xyz[2]:.7f}"))
-
+        Molecule.print_mol(self.mol)
 
     def print_geom_opt_setup(self):
         print("#"*self.print_width)
@@ -112,15 +119,16 @@ class SCF:
             alpha = kwargs.get('alpha', 1.0)
             return - alpha * self.grad
         if self.opt_method == 'bfgs':
+            alpha = kwargs.get('alpha', 1.0)
             if iter == 0:
-                self.inv_hessian = np.eye(len(self.grad))
+                self.inv_hessian = alpha * np.eye(len(self.grad))
             else:
                 diff_grad = self.grad - self.grad_old 
                 tmp = np.eye((len(self.grad))) - np.outer(self.step_old, diff_grad) / np.dot(self.step_old, diff_grad)
                 self.inv_hessian = tmp @ self.inv_hessian @ tmp.T  + np.outer(self.step_old, self.step_old) / np.dot(self.step_old, diff_grad)       
 
-            alpha = kwargs.get('alpha', 1.0)
-            self.step = - alpha * self.inv_hessian @ self.grad
+            
+            self.step = - self.inv_hessian @ self.grad
             self.grad_old = self.grad
             self.step_old = self.step
 
@@ -271,6 +279,8 @@ class SCF:
         print(f"  max_iter          -> {self.max_iter}")
         print(f"  convergence_crit  -> {self.convergence_crit:e}")
         print(f"  convergence_type  -> {self.convergence_type}")
+        print(f"  diis              -> {self.diis}")
+        print(f"     diis_size      -> {self.diis_size}")
         print("Starting SCF now".center(self.print_width))
         print("#"*self.print_width)
 
