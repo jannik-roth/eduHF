@@ -54,6 +54,10 @@ class SCF:
                 self.print_geom_opt_step(iter)
             self.prepare_integrals()
             self.run_scf(**scf_params)
+            
+            if self.converged == False:
+                raise ValueError("SCF did NOT converge, do NOT continue with the geometry optimization")
+            
             self.grad = self.get_gradient()
 
             self.converged_geom, error = self.check_convergence_geom()
