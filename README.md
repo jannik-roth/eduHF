@@ -6,9 +6,9 @@ This repository is an educational implementation of a Hartree-Fock (HF) program 
 
 ## 0. Theoretical Background
 
-An explanation on the Hartree-Fock method is given in `docs/theory.pdf`. Literature recommendations are given there too.
+An explanation on the Hartree-Fock method, geometry optimization and DIIS is given in `docs/theory.pdf`. Literature recommendations are given there too.
 
-The program uses the McMurchie-Davidson Scheme for the evaluation of the necessary integrals. A short intrduction is given in `docs/MMD.pdf`.
+The program uses the McMurchie-Davidson Scheme for the evaluation of the necessary integrals and their derivatives with respect to atomic positions. A short intrduction is given in `docs/MMD.pdf`.
 
 ## 1. Installation
 Download the code to your local machine. To use the package, you might need to add the location of the package to your `PYTHONPATH` by adding
