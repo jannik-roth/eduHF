@@ -1,4 +1,11 @@
+module globals
+    implicit none
+    real*8 :: PI = 3.14159265358979323846264338327950288419
+end module globals
+
+
 function boys(T, n)
+    use globals
     implicit none
     real*8 :: boys
     real*8, intent(in) :: T
@@ -6,7 +13,6 @@ function boys(T, n)
 
     real*8 :: work(n+1)
     integer :: i
-    real*8 :: PI = 3.14159265358979323846264338327950288419
 
     if ( abs(T) .le. 1.0e-11 ) then 
         boys = 1.0 / (2.0 * n + 1)
@@ -155,6 +161,7 @@ function overlap_der(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz
 end function overlap_der
 
 function overlap_element(exp1, l1, xyz1, exp2, l2, xyz2) result(S_inner)
+    use globals
     implicit none
     real*8, intent(in) :: exp1
     integer, dimension(3), intent(in) :: l1
@@ -164,7 +171,6 @@ function overlap_element(exp1, l1, xyz1, exp2, l2, xyz2) result(S_inner)
     real*8, dimension(3), intent(in) :: xyz2
 
     real*8 :: S_inner, e
-    real*8 :: PI = 3.14159265358979323846264338327950288419
 
     S_inner = e(l1(1), l2(1), 0, xyz1(1)-xyz2(1), exp1, exp2) &
             * e(l1(2), l2(2), 0, xyz1(2)-xyz2(2), exp1, exp2) &
@@ -174,6 +180,7 @@ function overlap_element(exp1, l1, xyz1, exp2, l2, xyz2) result(S_inner)
 end function overlap_element
 
 function overlap_der_element(exp1, l1, xyz1, exp2, l2, xyz2, center, dim) result(res)
+    use globals
     implicit none
     real*8, intent(in) :: exp1, exp2
     integer, dimension(3), intent(in) :: l1, l2
@@ -181,7 +188,6 @@ function overlap_der_element(exp1, l1, xyz1, exp2, l2, xyz2, center, dim) result
     integer, intent(in) :: center, dim
 
     real*8 :: res, tmp1, tmp2, tmp3, e, e_der
-    real*8 :: PI = 3.14159265358979323846264338327950288419
     tmp1 = 0.0
     tmp2 = 0.0
     tmp3 = 0.0
@@ -235,6 +241,7 @@ function kinetic(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xyz2) r
 end function kinetic
 
 function kinetic_der_element(exp1, l1, xyz1, exp2, l2, xyz2, center, dim) result(res)
+    use globals
     implicit none
     real*8, intent(in) :: exp1, exp2
     integer, dimension(3), intent(in) :: l1, l2
@@ -242,7 +249,6 @@ function kinetic_der_element(exp1, l1, xyz1, exp2, l2, xyz2, center, dim) result
     integer, intent(in) :: center, dim
 
     real*8 :: res, kin1, kin2, kin3, e_der, e, tmp
-    real*8 :: PI = 3.14159265358979323846264338327950288419
 
     ! derivative wrt to the x coordinate
     if (dim .eq. 0) then
@@ -366,6 +372,7 @@ function potential_1e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xy
 end function potential_1e
 
 function nuc_attraction(exp1, l1, xyz1, exp2, l2, xyz2, xyza) result(nuc_att)
+    use globals
     implicit none
     real*8, intent(in) :: exp1, exp2
     integer, intent(in) :: l1(3), l2(3)
@@ -374,7 +381,6 @@ function nuc_attraction(exp1, l1, xyz1, exp2, l2, xyz2, xyza) result(nuc_att)
     real*8 :: p
     real*8, dimension(3) :: xyzp
     real*8 :: R_pc2
-    real*8, parameter :: PI = 3.14159265358979323846264338327950288419
 
     real*8 :: e, r, nuc_att
     integer :: t, u , v
@@ -401,6 +407,7 @@ end function nuc_attraction
 
 function nuc_attraction_der(exp1, l1, xyz1, exp2, l2, xyz2, xyza, dim) result(res)
     ! Always differentiate the first center !
+    use globals
     implicit none
     real*8, intent(in) :: exp1, exp2
     integer, intent(in) :: l1(3), l2(3), dim
@@ -409,7 +416,6 @@ function nuc_attraction_der(exp1, l1, xyz1, exp2, l2, xyz2, xyza, dim) result(re
     real*8 :: p
     real*8, dimension(3) :: xyzp
     real*8 :: R_pc2
-    real*8, parameter :: PI = 3.14159265358979323846264338327950288419
 
     real*8 :: e, e_der, r, res
     integer :: t, u , v
@@ -544,6 +550,7 @@ function potential_2e(ng1, coeffs1, exps1, l1, xyz1, ng2, coeffs2, exps2, l2, xy
 end function potential_2e
 
 function electron_repulsion(exp1, l1, xyz1, exp2, l2, xyz2, exp3, l3, xyz3, exp4, l4, xyz4) result(el_rep)
+    use globals
     implicit none
     real*8, intent(in) :: exp1, exp2, exp3, exp4
     integer, dimension(3), intent(in) :: l1, l2, l3, l4
@@ -552,7 +559,6 @@ function electron_repulsion(exp1, l1, xyz1, exp2, l2, xyz2, exp3, l3, xyz3, exp4
     real*8 :: p, q, el_rep, R_pq2, e, r
     real*8, dimension(3) :: xyzp, xyzq
     integer :: t, u, v, tau, nu, phi
-    real*8, parameter :: PI = 3.14159265358979323846264338327950288419
 
     p = exp1 +exp2
     q = exp3 + exp4
@@ -588,6 +594,7 @@ function electron_repulsion(exp1, l1, xyz1, exp2, l2, xyz2, exp3, l3, xyz3, exp4
 end function electron_repulsion
 
 function electron_repulsion_der(exp1, l1, xyz1, exp2, l2, xyz2, exp3, l3, xyz3, exp4, l4, xyz4, dim) result(res)
+    use globals
     ! always differentiate the first bf
     implicit none
     real*8, intent(in) :: exp1, exp2, exp3, exp4
@@ -598,7 +605,6 @@ function electron_repulsion_der(exp1, l1, xyz1, exp2, l2, xyz2, exp3, l3, xyz3, 
     real*8 :: p, q, R_pq2, e, e_der, r, res
     real*8, dimension(3) :: xyzp, xyzq
     integer :: t, u, v, tau, nu, phi
-    real*8, parameter :: PI = 3.14159265358979323846264338327950288419
 
     p = exp1 +exp2
     q = exp3 + exp4
