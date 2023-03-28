@@ -39,6 +39,12 @@ class Molecule:
             self.noe += atom.charge
         self.noe -= self.charge
 
+    def __str__(self) -> str:
+        string = "{:<10} {:<10} {:<10} {:<10}\n".format('symbol','x','y', 'z')
+        for at in self.geometry:
+            string += "{:<10} {:<10} {:<10} {:<10}\n".format(at.symbol, f"{at.xyz[0]:.7f}", f"{at.xyz[1]:.7f}", f"{at.xyz[2]:.7f}")
+        return string
+
     def list_atom_types(self):
         return set([atom.symbol for atom in self.geometry])
     
@@ -73,10 +79,3 @@ class Molecule:
         xyz1_u = xyz1 / np.linalg.norm(xyz1)
         xyz2_u = xyz2 / np.linalg.norm(xyz2)
         return 180.0 / np.pi * np.arccos(np.clip(np.dot(xyz1_u, xyz2_u), -1.0, 1.0))
-
-    
-    @staticmethod
-    def print_mol(mol):
-        print("{:<10} {:<10} {:<10} {:<10}".format('symbol','x','y', 'z'))
-        for at in mol.geometry:
-            print("{:<10} {:<10} {:<10} {:<10}".format(at.symbol, f"{at.xyz[0]:.7f}", f"{at.xyz[1]:.7f}", f"{at.xyz[2]:.7f}"))

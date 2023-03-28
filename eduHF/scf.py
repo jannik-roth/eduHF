@@ -101,8 +101,8 @@ class SCF:
         print("#"*self.print_width)
         print(f"GEOM OPT ITER {iter}".center(self.print_width))
         print(f"Current Geometry".center(self.print_width))
-        Molecule.print_mol(self.mol)
-
+        print(self.mol)
+        
     def print_geom_opt_setup(self):
         print("#"*self.print_width)
         print("Geom opt setup".center(self.print_width))
