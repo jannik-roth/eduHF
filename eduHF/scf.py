@@ -32,7 +32,7 @@ class SCF:
 
     def geom_opt(self,
                  max_iter_geom : int = 50,
-                 opt_method : str = 'gd',
+                 opt_method : str = 'bfgs',
                  convergence_crit_geom : float = 1e-5,
                  convergence_type_geom : str = 'rms',
                  info : int = 10,
@@ -347,9 +347,10 @@ class SCF:
         nbf = self.basis.nbf
         S = np.eye(nbf)
         for mu in range(nbf):
-            for nu in range(mu+1, nbf):
+            #for nu in range(mu+1, nbf):
+            for nu in range(nbf):
                 S[mu, nu] = SCF.overlap_item(self.basis(mu), self.basis(nu))
-                S[nu, mu] = S[mu, nu]
+                # S[nu, mu] = S[mu, nu]
         return S
     
     def overlap_der_matrix(self, center, dim):

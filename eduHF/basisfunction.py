@@ -2,6 +2,7 @@ import numpy as np
 from .slater_expansion import *
 from dataclasses import dataclass
 from .geometry import Molecule
+from scipy.special import factorial, factorial2, gamma
 
 @staticmethod
 def _Lvecs_from_nl(nl_quant: str):
@@ -32,77 +33,127 @@ class SlaterFunction:
 
 @dataclass
 class ContractedGaussianFunction:
-    ng: int
     alphas: np.array
     coeffs: np.array
     l_vec: np.array
     center: int
     xyz: np.array
+    normalized: bool
 
-class BasisSet:
-    def __init__(self, basis_dict= dict[ str: list[tuple[str, float]]]):
-        self.basis = {}
-        for at, funcs in basis_dict.items():
-            self.basis[at] = funcs
+    def __post_init__(self):
+        if not self.normalized:
+            self._normalize_CGF()
+            self.normalized = True
 
-    def __call__(self, at):
-        return self.basis[at]
-    
-    def available_atom_types(self):
-        return set(self.basis.keys())
-    
+    def _normalize_CGF(self):
+        L = np.sum(self.l_vec)
+        
+        for i in range(len(self.alphas)):
+            fac2 = (2.0 / np.pi)**0.75 * 2.0**L * (self.alphas[i] ** ((2.0*L+3.0)/4.0)) / np.sqrt(factorial2(2*self.l_vec[0]-1)*factorial2(2*self.l_vec[1]-1)*factorial2(2*self.l_vec[2]-1))
+            self.coeffs[i] *= fac2
+        
+        tmp = 0.0
+        for ai in self.alphas:
+            for aj in self.alphas:
+                tmp += ai * aj / ((ai+aj)**(L + 1.5))
+        fac1 = 1.0 / np.sqrt(np.pi**1.5 * factorial2(2*self.l_vec[0]-1) * factorial2(2*self.l_vec[1]-1) * factorial2(2*self.l_vec[2]-1) * tmp / (2.0**L))
+        self.coeffs *= fac1
+
 class Basis:
-    def __init__(self, mol: Molecule, basis_set: BasisSet, ng: int):
+    def __init__(self, mol: Molecule, basis_set: dict, normalized: bool):
         self.mol = mol
-        self.basis_set = basis_set
-        self.ng = ng
-        self.nbf = None
-        self.nbf_slater = None
-        self._check_compatible()
+        self.basis = []
 
-        self.basis_slater = self._build_basis_slater()
-        self.basis = self._build_basis_gauss()
+        if not self.mol.list_atom_types().issubset(set(basis_set.keys())):
+            raise ValueError("Basis set does not cover all necessary atom types!")
+
+        for idx, atom in enumerate(self.mol.geometry):
+            for bf in basis_set[atom.symbol]:
+                l_vecs = _Lvecs_from_nl(bf[0])
+                for l_vec in l_vecs:
+                    self.basis.append(ContractedGaussianFunction(np.array(bf[1]), np.array(bf[2]), l_vec, idx, atom.xyz, normalized))
+
+        self.nbf = len(self.basis)
+
+    @classmethod
+    def from_slater(cls, mol : Molecule, dict_slater : dict, ng):
+        return cls(mol, cls._slater_to_gauss_dict(dict_slater, ng), True) 
+    
+    @classmethod
+    def from_file(cls, mol : Molecule, filename : str):
+        return cls(mol, cls._gauss_dict_from_file(filename), False)
 
     def __call__(self, idx : int):
         return self.basis[idx]
 
-    def _check_compatible(self):
-        if not self.mol.list_atom_types().issubset(self.basis_set.available_atom_types()):
-            raise ValueError("BasisSet does not cover all necessary atom types!!!")
+    @staticmethod
+    def _slater_to_gauss_dict(dict_s, ng):
+        dict_g = {}
+        for key, val in dict_s.items():
+            bfs_for_atom = []
+            for tup in val:
+                coeffs = np.zeros(ng)
+                alphas = np.zeros(ng)
+                slater_exp(alphas, coeffs, tup[1], tup[0])
+                bfs_for_atom.append((tup[0], alphas, coeffs))
+            dict_g[key] = bfs_for_atom
+        return dict_g
     
-    def _build_basis_slater(self) -> list[SlaterFunction]:
-        basis_sl = []
-        for idx, atom in enumerate(self.mol.geometry):
-            bfs = self.basis_set(atom.symbol)
-            for (nl, zeta) in bfs:
-                basis_sl.append(SlaterFunction(zeta, nl, idx, atom.xyz))
-        self.nbf_slater = len(basis_sl)
-        return basis_sl
-    
-    def _build_basis_gauss(self) -> list[ContractedGaussianFunction]:
-        basis = []
-        for sl_func in self.basis_slater:
-            basis.extend(self.Slater2CGaussians(sl_func, self.ng))
-        self.nbf = len(basis)
-        return basis
-    
-    def Slater2CGaussians(self, slater: SlaterFunction, ng: int):
-        cgaussians = []
+    @staticmethod
+    def _gauss_dict_from_file(filename : str) -> dict:
+        dict_g = {}
+        with open(filename) as fl:
+            lines = fl.read().splitlines()
+            for l_num in range(1, len(lines)-1):
+                if (lines[l_num-1] == '*' and lines[l_num+1] == '*'):
+                    symb = lines[l_num].split()[0].title()
+                    counter_bfs = np.arange(1, 6)
+                    counter = 2
+                    funcs = []
+                    while (not (lines[l_num + counter] == '*')):
+                        length, func_type =  int(lines[l_num + counter].split()[0]), lines[l_num + counter].split()[1].lower()
+                        l_quant = Basis._letter_to_l(func_type)
+                        alphas = np.zeros(length)
+                        coeffs = np.zeros(length)
+                        for i in range(length):
+                            alphas[i] = float(lines[l_num + counter + i + 1].split()[0].replace('D', 'E'))
+                            coeffs[i] = float(lines[l_num + counter + i + 1].split()[1].replace('D', 'E')) #* Basis.norm2(l_quant, alphas[i])
 
-        l_vecs = _Lvecs_from_nl(slater.nl_quant)
-        coeffs = np.zeros(ng)
-        alphas = np.zeros(ng)
-        slater_exp(alphas, coeffs, slater.zeta, slater.nl_quant)
+                        nl_quant = str(counter_bfs[l_quant]) + str(func_type)
+                        funcs.append((nl_quant, alphas, coeffs))            
 
-        for l_vec in l_vecs:
-            cgaussians.append(ContractedGaussianFunction(ng, alphas, coeffs, l_vec, slater.center, slater.xyz))
+                        counter_bfs[l_quant] += 1
+                        counter += length + 1
+                    dict_g[symb] = funcs
+        return dict_g
+
+    @staticmethod
+    def gaussian_int(n, alpha):
+        r'''int_0^inf x^n exp(-alpha x^2) dx'''
+        n1 = (n + 1) * .5
+        return gamma(n1) / (2. * alpha**n1)
+
+    @staticmethod 
+    def gto_norm(l, expnt):
+        if l >= 0:
+            return 1/np.sqrt(Basis.gaussian_int(l*2+2, 2*expnt))
+        else:
+            raise ValueError('l should be >= 0')
         
-        return cgaussians
-
-    def Slaters2CGaussians(self, slaters: list[SlaterFunction], ng: int):
-        cgaussians = []
-        for slater in slaters:
-            cgaussians.append(self.Slater2CGaussians(slater, ng))
-        return cgaussians
-
-
+    @staticmethod
+    def norm2(l, alpha):
+        return (2.0 * alpha / np.pi)**0.75 * np.sqrt(4.0 * alpha) ** (l/ factorial2(l + 1))
+        
+    @staticmethod
+    def _letter_to_l(letter):
+        match letter.lower():
+            case 's':
+                return 0
+            case 'p':
+                return 1
+            case 'd':
+                return 2
+            case 'f':
+                return 3
+            case 'g':
+                return 4
