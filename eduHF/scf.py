@@ -2,6 +2,7 @@ import numpy as np
 from .mcmurchie_davidson import *
 from .geometry import *
 from .basisfunction import *
+from . import MMD
 
 
 class SCF:
@@ -313,9 +314,18 @@ class SCF:
         return 0.5 * np.sum(np.multiply(self.P, self.T + self.V + self.F))
 
     def build_Fock(self):
-        J = np.einsum('ls,mnls->mn', self.P, self.ERIs, optimize=True)
-        K = -0.5 * np.einsum('ls,mlsn->mn', self.P, self.ERIs, optimize=True)
-        self.F = self.T + self.V + J + K
+        # J = np.einsum('ls,mnls->mn', self.P, self.ERIs, optimize=True)
+        # K = -0.5 * np.einsum('ls,mlsn->mn', self.P, self.ERIs, optimize=True)
+        #J = np.einsum('lk,ijkl->ij', self.P, self.ERIs, optimize=True)
+        #K = -0.5 * np.einsum('lk,ikjl->ij', self.P, self.ERIs, optimize=True)
+        self.F = self.T + self.V
+        for i in range(self.basis.nbf):
+            for j in range(self.basis.nbf):
+                for k in range(self.basis.nbf):
+                    for l in range(self.basis.nbf):
+                        self.F[i,j] += self.P[l,k]*(self.ERIs[i,j,k,l] - 0.5 * self.ERIs[i,k,j,l])
+        
+        # self.F = self.T + self.V + J + K
 
     def build_P(self):
         for mu in range(self.basis.nbf):
@@ -353,6 +363,15 @@ class SCF:
                 # S[nu, mu] = S[mu, nu]
         return S
     
+    def overlap_matrix_new(self):
+        nbf = self.basis.nbf
+        S = np.eye(nbf)
+        for mu in range(nbf):
+            for nu in range(nbf):
+                S[mu, nu] = MMD.overlap_item(self.basis(mu), self.basis(nu))
+                # S[nu, mu] = S[mu, nu]
+        return S
+    
     def overlap_der_matrix(self, center, dim):
         nbf = self.basis.nbf
         S_der = np.zeros((nbf,nbf))
@@ -371,10 +390,19 @@ class SCF:
 
     def kinetic_matrix(self):
         nbf = self.basis.nbf
-        T = np.zeros((nbf,nbf))
+        T = np.zeros((nbf,nbf), dtype=np.float64)
         for mu in range(nbf):
             for nu in range(mu, nbf):
                 T[mu, nu] = SCF.kinetic_item(self.basis(mu), self.basis(nu))
+                T[nu, mu] = T[mu, nu]
+        return T
+    
+    def kinetic_matrix_new(self):
+        nbf = self.basis.nbf
+        T = np.zeros((nbf,nbf), dtype=np.float64)
+        for mu in range(nbf):
+            for nu in range(mu, nbf):
+                T[mu, nu] = MMD.kinetic_item(self.basis(mu), self.basis(nu))
                 T[nu, mu] = T[mu, nu]
         return T
     
@@ -401,6 +429,16 @@ class SCF:
             for nu in range(mu, nbf):
                 for at in self.mol.geometry:
                     V[mu, nu] += - at.charge * SCF.potential_1e_item(self.basis(mu), self.basis(nu), at)
+                V[nu, mu] = V[mu, nu]
+        return V
+    
+    def potential_1e_matrix_new(self):
+        nbf = self.basis.nbf
+        V = np.zeros((nbf, nbf))
+        for mu in range(nbf):
+            for nu in range(mu, nbf):
+                for at in self.mol.geometry:
+                    V[mu, nu] += - at.charge * MMD.potential_1e_item(self.basis(mu), self.basis(nu), at)
                 V[nu, mu] = V[mu, nu]
         return V
     
@@ -434,12 +472,25 @@ class SCF:
 
     def potential_2e_tensor(self):
         nbf = self.basis.nbf
-        eris = np.zeros((nbf, nbf, nbf, nbf))
+        eris = np.zeros((nbf, nbf, nbf, nbf), dtype=np.float64)
         for mu in range(nbf):
             for nu in range(nbf):
                 for lamda in range(nbf):
                     for sigma in range(nbf):
                         eris[mu, nu, lamda, sigma] = SCF.potential_2e_item(self.basis(mu),
+                                                                           self.basis(nu),
+                                                                           self.basis(lamda),
+                                                                           self.basis(sigma))
+        return eris
+    
+    def potential_2e_tensor_new(self):
+        nbf = self.basis.nbf
+        eris = np.zeros((nbf, nbf, nbf, nbf), dtype=np.float64)
+        for mu in range(nbf):
+            for nu in range(nbf):
+                for lamda in range(nbf):
+                    for sigma in range(nbf):
+                        eris[mu, nu, lamda, sigma] = MMD.potential_2e_item(self.basis(mu),
                                                                            self.basis(nu),
                                                                            self.basis(lamda),
                                                                            self.basis(sigma))
