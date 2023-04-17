@@ -1,15 +1,15 @@
 import numpy as np
-from .slater_expansion import *
 from dataclasses import dataclass
+from scipy.special import factorial2
 from .geometry import Molecule
-from scipy.special import factorial, factorial2, gamma
+from . import slater_expansion
 
 @staticmethod
 def _Lvecs_from_nl(nl_quant: str):
     conv = {"s" : [np.array([0, 0, 0], dtype=int)],
             "p" : [np.array([1, 0, 0], dtype=int), np.array([0, 1, 0], dtype=int), np.array([0, 0, 1], dtype=int)],
-            "d" : [np.array([2, 0, 0], dtype=int), np.array([0, 2, 0], dtype=int), np.array([0, 0, 2], dtype=int),
-                   np.array([1, 1, 0], dtype=int), np.array([0, 1, 1], dtype=int), np.array([1, 0, 1], dtype=int)],
+            "d" : [np.array([2, 0, 0], dtype=int), np.array([1, 1, 0], dtype=int), np.array([1, 0, 1], dtype=int),
+                   np.array([0, 2, 0], dtype=int), np.array([0, 1, 1], dtype=int), np.array([0, 0, 2], dtype=int)],
             "f" : [np.array([3, 0, 0], dtype=int), np.array([0, 3, 0], dtype=int), np.array([0, 0, 3], dtype=int),
                    np.array([2, 1, 0], dtype=int), np.array([2, 0, 1], dtype=int),
                    np.array([1, 2, 0], dtype=int), np.array([0, 2, 1], dtype=int),
@@ -47,15 +47,15 @@ class ContractedGaussianFunction:
 
     def _normalize_CGF(self):
         L = np.sum(self.l_vec)
-        
+
         for i in range(len(self.alphas)):
-            fac2 = (2.0 / np.pi)**0.75 * 2.0**L * (self.alphas[i] ** ((2.0*L+3.0)/4.0)) / np.sqrt(factorial2(2*self.l_vec[0]-1)*factorial2(2*self.l_vec[1]-1)*factorial2(2*self.l_vec[2]-1))
-            self.coeffs[i] *= fac2
+            self.coeffs[i] *= (2.0 / np.pi)**0.75 * 2.0**L * (self.alphas[i] ** ((2.0*L+3.0)/4.0)) / np.sqrt(factorial2(2*self.l_vec[0]-1)*factorial2(2*self.l_vec[1]-1)*factorial2(2*self.l_vec[2]-1))
         
         tmp = 0.0
-        for ai in self.alphas:
-            for aj in self.alphas:
-                tmp += ai * aj / ((ai+aj)**(L + 1.5))
+        for ai, ci in zip(self.alphas, self.coeffs):
+            for aj, cj in zip(self.alphas, self.coeffs):
+                tmp += (ci * cj) / (ai+aj)**(L + 1.5)
+        
         fac1 = 1.0 / np.sqrt(np.pi**1.5 * factorial2(2*self.l_vec[0]-1) * factorial2(2*self.l_vec[1]-1) * factorial2(2*self.l_vec[2]-1) * tmp / (2.0**L))
         self.coeffs *= fac1
 
@@ -92,9 +92,7 @@ class Basis:
         for key, val in dict_s.items():
             bfs_for_atom = []
             for tup in val:
-                coeffs = np.zeros(ng)
-                alphas = np.zeros(ng)
-                slater_exp(alphas, coeffs, tup[1], tup[0])
+                coeffs, alphas = slater_expansion.slater_expansion(tup[1], tup[0], ng)
                 bfs_for_atom.append((tup[0], alphas, coeffs))
             dict_g[key] = bfs_for_atom
         return dict_g
@@ -112,7 +110,7 @@ class Basis:
                     funcs = []
                     while (not (lines[l_num + counter] == '*')):
                         length, func_type =  int(lines[l_num + counter].split()[0]), lines[l_num + counter].split()[1].lower()
-                        l_quant = Basis._letter_to_l(func_type)
+                        l_quant = slater_expansion._letter_to_l(func_type)
                         alphas = np.zeros(length)
                         coeffs = np.zeros(length)
                         for i in range(length):
@@ -126,34 +124,3 @@ class Basis:
                         counter += length + 1
                     dict_g[symb] = funcs
         return dict_g
-
-    @staticmethod
-    def gaussian_int(n, alpha):
-        r'''int_0^inf x^n exp(-alpha x^2) dx'''
-        n1 = (n + 1) * .5
-        return gamma(n1) / (2. * alpha**n1)
-
-    @staticmethod 
-    def gto_norm(l, expnt):
-        if l >= 0:
-            return 1/np.sqrt(Basis.gaussian_int(l*2+2, 2*expnt))
-        else:
-            raise ValueError('l should be >= 0')
-        
-    @staticmethod
-    def norm2(l, alpha):
-        return (2.0 * alpha / np.pi)**0.75 * np.sqrt(4.0 * alpha) ** (l/ factorial2(l + 1))
-        
-    @staticmethod
-    def _letter_to_l(letter):
-        match letter.lower():
-            case 's':
-                return 0
-            case 'p':
-                return 1
-            case 'd':
-                return 2
-            case 'f':
-                return 3
-            case 'g':
-                return 4

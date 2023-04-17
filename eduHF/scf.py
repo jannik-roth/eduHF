@@ -1,5 +1,4 @@
 import numpy as np
-from .mcmurchie_davidson import *
 from .geometry import *
 from .basisfunction import *
 from . import MMD
@@ -353,24 +352,7 @@ class SCF:
         self.ERIs = self.potential_2e_tensor()
         self.setup_int = True
     
-    def prepare_integrals_new(self):
-        self.S = self.overlap_matrix_new()
-        self.T = self.kinetic_matrix_new()
-        self.V = self.potential_1e_matrix_new()
-        self.ERIs = self.potential_2e_tensor_new()
-        self.setup_int = True
-
     def overlap_matrix(self):
-        nbf = self.basis.nbf
-        S = np.eye(nbf)
-        for mu in range(nbf):
-            #for nu in range(mu+1, nbf):
-            for nu in range(nbf):
-                S[mu, nu] = SCF.overlap_item(self.basis(mu), self.basis(nu))
-                # S[nu, mu] = S[mu, nu]
-        return S
-    
-    def overlap_matrix_new(self):
         nbf = self.basis.nbf
         S = np.eye(nbf)
         for mu in range(nbf):
@@ -380,22 +362,6 @@ class SCF:
         return S
     
     def overlap_der_matrix(self, center, dim):
-        nbf = self.basis.nbf
-        S_der = np.zeros((nbf,nbf))
-        for mu in range(nbf):
-            for nu in range(mu+1, nbf):
-                if ((self.basis(mu).center == center) and (self.basis(nu).center == center)):
-                    S_der[mu, nu] = 0.0
-                elif self.basis(mu).center == center:
-                    S_der[mu, nu] = SCF.overlap_der_item(self.basis(mu), self.basis(nu), 0, dim)
-                elif self.basis(nu).center == center:
-                    S_der[mu, nu] = SCF.overlap_der_item(self.basis(mu), self.basis(nu), 1, dim)
-                else:
-                    S_der[mu, nu] = 0.0
-                S_der[nu, mu] = S_der[mu, nu]
-        return S_der
-    
-    def overlap_der_matrix_new(self, center, dim):
         nbf = self.basis.nbf
         S_der = np.zeros((nbf,nbf))
         for mu in range(nbf):
@@ -416,36 +382,11 @@ class SCF:
         T = np.zeros((nbf,nbf))
         for mu in range(nbf):
             for nu in range(mu, nbf):
-                T[mu, nu] = SCF.kinetic_item(self.basis(mu), self.basis(nu))
-                T[nu, mu] = T[mu, nu]
-        return T
-    
-    def kinetic_matrix_new(self):
-        nbf = self.basis.nbf
-        T = np.zeros((nbf,nbf))
-        for mu in range(nbf):
-            for nu in range(mu, nbf):
                 T[mu, nu] = MMD.kinetic_item(self.basis(mu), self.basis(nu))
                 T[nu, mu] = T[mu, nu]
         return T
     
     def kinetic_der_matrix(self, center, dim):
-        nbf = self.basis.nbf
-        T_der = np.zeros((nbf,nbf))
-        for mu in range(nbf):
-            for nu in range(mu+1, nbf):
-                if ((self.basis(mu).center == center) and (self.basis(nu).center == center)):
-                    T_der[mu, nu] = 0.0
-                elif self.basis(mu).center == center:
-                    T_der[mu, nu] = SCF.kinetic_der_item(self.basis(mu), self.basis(nu), 0, dim)
-                elif self.basis(nu).center == center:
-                    T_der[mu, nu] = SCF.kinetic_der_item(self.basis(mu), self.basis(nu), 1, dim)
-                else:
-                    T_der[mu, nu] = 0.0
-                T_der[nu, mu] = T_der[mu, nu]
-        return T_der
-    
-    def kinetic_der_matrix_new(self, center, dim):
         nbf = self.basis.nbf
         T_der = np.zeros((nbf,nbf))
         for mu in range(nbf):
@@ -467,49 +408,11 @@ class SCF:
         for mu in range(nbf):
             for nu in range(mu, nbf):
                 for at in self.mol.geometry:
-                    V[mu, nu] += - at.charge * SCF.potential_1e_item(self.basis(mu), self.basis(nu), at)
-                V[nu, mu] = V[mu, nu]
-        return V
-    
-    def potential_1e_matrix_new(self):
-        nbf = self.basis.nbf
-        V = np.zeros((nbf, nbf))
-        for mu in range(nbf):
-            for nu in range(mu, nbf):
-                for at in self.mol.geometry:
                     V[mu, nu] += - at.charge * MMD.potential_1e_item(self.basis(mu), self.basis(nu), at)
                 V[nu, mu] = V[mu, nu]
         return V
     
     def potential_1e_der_matrix(self, center, dim):
-        nbf = self.basis.nbf
-        V_der = np.zeros((nbf, nbf))
-        for mu in range(nbf):
-            for nu in range(mu, nbf):
-                for idx, at in enumerate(self.mol.geometry):
-                    if ((self.basis(mu).center == center) and (self.basis(nu).center == center) and (idx == center)):
-                        # all at the same center
-                        V_der[mu, nu] += 0.0
-                    elif ((self.basis(mu).center == center) and (idx == center)):
-                        V_der[mu, nu] -= -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
-                    elif ((self.basis(nu).center == center) and (idx == center)):
-                        V_der[mu, nu] -= -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
-                    elif ((self.basis(mu).center == center) and (self.basis(nu).center == center)):
-                        V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
-                        V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
-                    elif (idx == center):
-                        V_der[mu, nu] -= -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
-                        V_der[mu, nu] -= -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
-                    elif (self.basis(mu).center == center):
-                        V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 0, dim)
-                    elif (self.basis(nu).center == center):
-                        V_der[mu, nu] += -at.charge * SCF.potential_1e_der_item(self.basis(mu), self.basis(nu), at, 1, dim)
-                    else:
-                        V_der[mu, nu] += 0.0
-                V_der[nu, mu] = V_der[mu, nu]
-        return V_der
-    
-    def potential_1e_der_matrix_new(self, center, dim):
         nbf = self.basis.nbf
         V_der = np.zeros((nbf, nbf))
         for mu in range(nbf):
@@ -544,19 +447,6 @@ class SCF:
             for nu in range(nbf):
                 for lamda in range(nbf):
                     for sigma in range(nbf):
-                        eris[mu, nu, lamda, sigma] = SCF.potential_2e_item(self.basis(mu),
-                                                                           self.basis(nu),
-                                                                           self.basis(lamda),
-                                                                           self.basis(sigma))
-        return eris
-    
-    def potential_2e_tensor_new(self):
-        nbf = self.basis.nbf
-        eris = np.zeros((nbf, nbf, nbf, nbf))
-        for mu in range(nbf):
-            for nu in range(nbf):
-                for lamda in range(nbf):
-                    for sigma in range(nbf):
                         eris[mu, nu, lamda, sigma] = MMD.potential_2e_item(self.basis(mu),
                                                                            self.basis(nu),
                                                                            self.basis(lamda),
@@ -579,73 +469,6 @@ class SCF:
                         elif ((center == self.basis(mu).center) + (center == self.basis(nu).center)
                              + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) == 3):
                             if not (center == self.basis(mu).center):
-                                eris_der[mu, nu, lamda, sigma] -= SCF.potential_2e_der_item(self.basis(mu),
-                                                                                            self.basis(nu),
-                                                                                            self.basis(lamda),
-                                                                                            self.basis(sigma),
-                                                                                            0, dim)
-                            elif not (center == self.basis(nu).center):
-                                eris_der[mu, nu, lamda, sigma] -= SCF.potential_2e_der_item(self.basis(mu),
-                                                                                            self.basis(nu),
-                                                                                            self.basis(lamda),
-                                                                                            self.basis(sigma),
-                                                                                            1, dim)
-                            elif not (center == self.basis(lamda).center):
-                                eris_der[mu, nu, lamda, sigma] -= SCF.potential_2e_der_item(self.basis(mu),
-                                                                                            self.basis(nu),
-                                                                                            self.basis(lamda),
-                                                                                            self.basis(sigma),
-                                                                                            2, dim)
-                            elif not (center == self.basis(sigma).center):
-                                eris_der[mu, nu, lamda, sigma] -= SCF.potential_2e_der_item(self.basis(mu),
-                                                                                            self.basis(nu),
-                                                                                            self.basis(lamda),
-                                                                                            self.basis(sigma),
-                                                                                            3, dim)
-                        elif ((center == self.basis(mu).center) + (center == self.basis(nu).center)
-                             + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) <= 2):
-                            if (center == self.basis(mu).center):
-                                eris_der[mu, nu, lamda, sigma] += SCF.potential_2e_der_item(self.basis(mu),
-                                                                                            self.basis(nu),
-                                                                                            self.basis(lamda),
-                                                                                            self.basis(sigma),
-                                                                                            0, dim)
-                            if (center == self.basis(nu).center):
-                                eris_der[mu, nu, lamda, sigma] += SCF.potential_2e_der_item(self.basis(mu),
-                                                                                            self.basis(nu),
-                                                                                            self.basis(lamda),
-                                                                                            self.basis(sigma),
-                                                                                            1, dim)
-                            if (center == self.basis(lamda).center):
-                                eris_der[mu, nu, lamda, sigma] += SCF.potential_2e_der_item(self.basis(mu),
-                                                                                            self.basis(nu),
-                                                                                            self.basis(lamda),
-                                                                                            self.basis(sigma),
-                                                                                            2, dim)
-                            if (center == self.basis(sigma).center):
-                                eris_der[mu, nu, lamda, sigma] += SCF.potential_2e_der_item(self.basis(mu),
-                                                                                            self.basis(nu),
-                                                                                            self.basis(lamda),
-                                                                                            self.basis(sigma),
-                                                                                            3, dim)
-        return eris_der
-    
-    def potential_2e_der_tensor_new(self, center, dim):
-        nbf = self.basis.nbf
-        eris_der = np.zeros((nbf, nbf, nbf, nbf))
-        for mu in range(nbf):
-            for nu in range(nbf):
-                for lamda in range(nbf):
-                    for sigma in range(nbf):
-                        if ((center == self.basis(mu).center) + (center == self.basis(nu).center)
-                             + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) == 0):
-                            eris_der[mu, nu, lamda, sigma] = 0.0
-                        elif ((center == self.basis(mu).center) + (center == self.basis(nu).center)
-                             + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) == 4):
-                            eris_der[mu, nu, lamda, sigma] = 0.0
-                        elif ((center == self.basis(mu).center) + (center == self.basis(nu).center)
-                             + (center == self.basis(lamda).center) + (center == self.basis(sigma).center) == 3):
-                            if not (center == self.basis(mu).center):
                                 eris_der[mu, nu, lamda, sigma] -= MMD.potential_2e_der_item(self.basis(mu),
                                                                                             self.basis(nu),
                                                                                             self.basis(lamda),
@@ -696,70 +519,3 @@ class SCF:
                                                                                             self.basis(sigma),
                                                                                             3, dim)
         return eris_der
-    
-    @staticmethod
-    def kinetic_item(bf1 : ContractedGaussianFunction,
-                     bf2 : ContractedGaussianFunction):
-        return kinetic(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                       bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
-    
-    @staticmethod
-    def kinetic_der_item(bf1 : ContractedGaussianFunction,
-                         bf2 : ContractedGaussianFunction,
-                         center : int,
-                         dim : int):
-        return kinetic_der(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                           bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
-                           center, dim)
-    @staticmethod
-    def overlap_item(bf1 : ContractedGaussianFunction,
-                     bf2 : ContractedGaussianFunction):
-        return overlap(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                       bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz)
-    @staticmethod
-    def overlap_der_item(bf1 : ContractedGaussianFunction,
-                         bf2 : ContractedGaussianFunction,
-                         center : int,
-                         dim : int):
-        return overlap_der(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                           bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
-                           center, dim)
-    @staticmethod
-    def potential_1e_item(bf1 : ContractedGaussianFunction,
-                          bf2 : ContractedGaussianFunction,
-                          at : Atom):
-        return potential_1e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, 
-                            bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
-                            at.xyz)
-    
-    @staticmethod
-    def potential_1e_der_item(bf1 : ContractedGaussianFunction,
-                              bf2 : ContractedGaussianFunction,
-                              at : Atom,
-                              center : int,
-                              dim : int):
-        return potential_1e_der(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz, 
-                                bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
-                                at.xyz, center, dim)
-    @staticmethod
-    def potential_2e_item(bf1 : ContractedGaussianFunction,
-                          bf2 : ContractedGaussianFunction,
-                          bf3 : ContractedGaussianFunction,
-                          bf4 : ContractedGaussianFunction):
-        return potential_2e(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                            bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
-                            bf3.coeffs, bf3.alphas, bf3.l_vec, bf3.xyz,
-                            bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz)
-    
-    @staticmethod
-    def potential_2e_der_item(bf1 : ContractedGaussianFunction,
-                              bf2 : ContractedGaussianFunction,
-                              bf3 : ContractedGaussianFunction,
-                              bf4 : ContractedGaussianFunction,
-                              center : int,
-                              dim : int):
-        return potential_2e_der(bf1.coeffs, bf1.alphas, bf1.l_vec, bf1.xyz,
-                                bf2.coeffs, bf2.alphas, bf2.l_vec, bf2.xyz,
-                                bf3.coeffs, bf3.alphas, bf3.l_vec, bf3.xyz,
-                                bf4.coeffs, bf4.alphas, bf4.l_vec, bf4.xyz,
-                                center, dim)
