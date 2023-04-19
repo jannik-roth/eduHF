@@ -1,9 +1,11 @@
 import numpy as np
-from scipy.special import erf
+from math import erf # use math instead of scipy.special because in can be used with numba.jit
+from numba import njit
 
 from .basisfunction import ContractedGaussianFunction
 from .geometry import Atom
 
+@njit(cache=True)
 def boys(T : float, n : int):
     if np.abs(T) < 1e-11:
         return 1.0 / (2.0 * n + 1.0)
@@ -16,6 +18,7 @@ def boys(T : float, n : int):
             work[i] = ((2*i-1) * work[i-1] - np.exp(-T)) / (2.0 * T)
         return work[n]
 
+@njit(cache=True)
 def E(n : int, m : int, T : int,
       AB : float, alpha : float, beta : float):
     
@@ -34,7 +37,7 @@ def E(n : int, m : int, T : int,
         return (1.0 / (2.0 * p) * E(n-1, m, T-1, AB, alpha, beta)
                 - beta * AB / p * E(n-1, m, T, AB, alpha, beta)
                 + (T+1.0) * E(n-1, m, T+1, AB, alpha, beta))
-    
+@njit(cache=True)    
 def E_der(n : int, m : int, T : int,
             AB : float, alpha : float, beta : float,
             center : int):
@@ -50,6 +53,7 @@ def E_der(n : int, m : int, T : int,
             res += - m * E(n, m-1, T, AB, alpha, beta)
     return res
 
+@njit(cache=True)
 def R(t : int, u : int, v : int, n : int,
       p : float, xyz_p : np.array, xyz_c : np.array):
     
@@ -72,7 +76,8 @@ def R(t : int, u : int, v : int, n : int,
         if (t > 1):
             tmp = (t - 1) * R(t-2, u, v, n+1, p, xyz_p, xyz_c)
         return tmp + diff_pc[0] * R(t-1, u, v, n+1, p, xyz_p, xyz_c)
-    
+
+@njit(cache=True)    
 def _overlap(alpha, L1, xyz1, beta, L2, xyz2):
     return (E(L1[0], L2[0], 0, xyz1[0]-xyz2[0], alpha, beta)
             * E(L1[1], L2[1], 0, xyz1[1]-xyz2[1], alpha, beta)
@@ -104,6 +109,7 @@ def kinetic_item(bf1 : ContractedGaussianFunction,
                                        + bf2.l_vec[2] * (bf2.l_vec[2]-1) * _overlap(a1, bf1.l_vec, bf1.xyz, a2, bf2.l_vec+np.array([0,0,-2]), bf2.xyz)))
     return res
 
+@njit(cache=True)
 def _nuc_attraction(alpha : float, L1 : np.array, xyz1 : np.array,
                     beta : float, L2 : np.array, xyz2 : np.array,
                     xyza : np.array) -> float:
@@ -132,6 +138,7 @@ def potential_1e_item(bf1 : ContractedGaussianFunction,
                                              at.xyz)
     return res
 
+@njit(cache=True)
 def _electron_repulsion(alpha : float, L1 : np.array, xyz1 : np.array,
                         beta : float, L2 : np.array, xyz2 : np.array,
                         gamma : float, L3 : np.array, xyz3 : np.array,
@@ -178,6 +185,7 @@ def potential_2e_item(bf1 : ContractedGaussianFunction,
 
     return res
 
+@njit(cache=True)
 def _overlap_der(alpha : float, L1 : np.array, xyz1 : np.array,
                  beta : float, L2 : np.array, xyz2 : np.array,
                  center : int, dim : int) -> float:
@@ -210,6 +218,7 @@ def overlap_der_item(bf1 : ContractedGaussianFunction,
                                           center, dim)
     return res
 
+@njit(cache=True)
 def _kinetic_der(alpha : float, L1 : np.array, xyz1 : np.array,
                  beta : float, L2 : np.array, xyz2 : np.array,
                  center : int, dim : int):
@@ -279,6 +288,7 @@ def kinetic_der_item(bf1 : ContractedGaussianFunction,
     
     return res
 
+@njit(cache=True)
 def _nuc_attraction_der(alpha : float, L1 : np.array, xyz1 : np.array,
                         beta : float, L2 : np.array, xyz2 : np.array,
                         xyza : np.array, dim : int) -> float:
@@ -335,6 +345,7 @@ def potential_1e_der_item_un(bf1 : ContractedGaussianFunction,
                                                  at.xyz, dim)
     return res
 
+@njit(cache=True)
 def _electron_repulsion_der(alpha : float, L1 : np.array, xyz1 : np.array,
                                beta : float, L2 : np.array, xyz2 : np.array,
                                gamma : float, L3 : np.array, xyz3 : np.array,
