@@ -28,6 +28,7 @@ class SCF:
         if self.mol.noe % 2 == 1:
             raise ValueError((f"Number of electrons in the molecule is {self.mol.noe} and therefore uneven."
                               " The current code does NOT provide unrestricted calculations"))
+        self.nocc = int(self.mol.noe / 2)
 
 
     def geom_opt(self,
@@ -271,7 +272,7 @@ class SCF:
         Q = np.zeros((nbf, nbf))
         for mu in range(nbf):
             for nu in range(nbf):
-                for i in range(int(self.mol.noe / 2)):
+                for i in range(self.nocc):
                     Q[mu, nu] += self.epsilons[i] * self.C[mu, i] * self.C[nu, i]
         Q *= 2
         return Q
@@ -313,24 +314,15 @@ class SCF:
         return 0.5 * np.sum(np.multiply(self.P, self.T + self.V + self.F))
 
     def build_Fock(self):
-        # J = np.einsum('ls,mnls->mn', self.P, self.ERIs, optimize=True)
-        # K = -0.5 * np.einsum('ls,mlsn->mn', self.P, self.ERIs, optimize=True)
-        #J = np.einsum('lk,ijkl->ij', self.P, self.ERIs, optimize=True)
-        #K = -0.5 * np.einsum('lk,ikjl->ij', self.P, self.ERIs, optimize=True)
-        self.F = self.T + self.V
-        for i in range(self.basis.nbf):
-            for j in range(self.basis.nbf):
-                for k in range(self.basis.nbf):
-                    for l in range(self.basis.nbf):
-                        self.F[i,j] += self.P[l,k]*(self.ERIs[i,j,k,l] - 0.5 * self.ERIs[i,k,j,l])
-        
-        # self.F = self.T + self.V + J + K
+        J = np.einsum('lk,ijkl->ij', self.P, self.ERIs, optimize=True)
+        K = -0.5 * np.einsum('lk,ikjl->ij', self.P, self.ERIs, optimize=True)
+        self.F = self.T + self.V + J + K
 
     def build_P(self):
         for mu in range(self.basis.nbf):
             for nu in range(self.basis.nbf):
                 self.P[mu,nu] = 0
-                for i in range(int(self.mol.noe / 2)):
+                for i in range(self.nocc):
                     self.P[mu, nu] += self.C[nu, i] * self.C[mu, i]
         self.P = 2*self.P
 
@@ -356,9 +348,9 @@ class SCF:
         nbf = self.basis.nbf
         S = np.eye(nbf)
         for mu in range(nbf):
-            for nu in range(nbf):
+            for nu in range(mu+1, nbf):
                 S[mu, nu] = MMD.overlap_item(self.basis(mu), self.basis(nu))
-                # S[nu, mu] = S[mu, nu]
+                S[nu, mu] = S[mu, nu]
         return S
     
     def overlap_der_matrix(self, center, dim):
@@ -444,13 +436,22 @@ class SCF:
         nbf = self.basis.nbf
         eris = np.zeros((nbf, nbf, nbf, nbf))
         for mu in range(nbf):
-            for nu in range(nbf):
-                for lamda in range(nbf):
-                    for sigma in range(nbf):
-                        eris[mu, nu, lamda, sigma] = MMD.potential_2e_item(self.basis(mu),
-                                                                           self.basis(nu),
-                                                                           self.basis(lamda),
-                                                                           self.basis(sigma))
+            for nu in range(mu, nbf):
+                for lamda in range(mu, nbf):
+                    for sigma in range(lamda, nbf):
+                        eris[mu, nu, lamda, sigma] 
+                        tmp = MMD.potential_2e_item(self.basis(mu),
+                                                    self.basis(nu),
+                                                    self.basis(lamda),
+                                                    self.basis(sigma))
+                        eris[mu, nu, lamda, sigma] = tmp 
+                        eris[nu, mu, lamda, sigma] = tmp 
+                        eris[mu, nu, sigma, lamda] = tmp 
+                        eris[nu, mu, sigma, lamda] = tmp 
+                        eris[lamda, sigma, mu, nu] = tmp 
+                        eris[lamda, sigma, nu, mu] = tmp 
+                        eris[sigma, lamda, mu, nu] = tmp 
+                        eris[sigma, lamda, nu, mu] = tmp 
         return eris
     
     def potential_2e_der_tensor(self, center, dim):
