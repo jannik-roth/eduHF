@@ -78,42 +78,6 @@ class SCF:
         if self.converged_geom == False:
             if info > 0:
                 self.print_not_conv_info_geom()
-
-    def print_not_conv_info_geom(self):
-        print("#"*self.print_width)
-        print(f'    GEOM OPT did NOT converge after {self.max_iter_geom} iterations'.center(self.print_width))
-        print("#"*self.print_width)
-
-    def print_conv_geom_info(self):
-        print("#"*self.print_width)
-        print(f"GEOM OPT CONVERGED".center(self.print_width))
-        print(f'req. {self.req_iterations_geom} iterations'.center(self.print_width))
-        print("#"*self.print_width)
-
-    def print_grad_error(self, error):
-        print("#"*self.print_width)
-        print(f"Current Gradient".center(self.print_width))
-        print("{:<10} {:<10} {:<10} {:<10}".format('symbol','x','y', 'z'))
-        for idx, at in enumerate(self.mol.geometry):
-            print("{:<10} {:<10} {:<10} {:<10}".format(at.symbol, f"{self.grad[idx*3]:.7f}", f"{self.grad[idx*3+1]:.7f}", f"{self.grad[idx*3+2]:.7f}"))
-        print(f"Error in geom opt: {error:e}")
-
-    def print_geom_opt_step(self, iter):
-        print("#"*self.print_width)
-        print(f"GEOM OPT ITER {iter}".center(self.print_width))
-        print(f"Current Geometry".center(self.print_width))
-        print(self.mol)
-        
-    def print_geom_opt_setup(self):
-        print("#"*self.print_width)
-        print("Geom opt setup".center(self.print_width))
-        print("#"*self.print_width)
-        print(f"  max_iter_geom          -> {self.max_iter_geom}")
-        print(f"  opt_method             -> {self.opt_method}")
-        print(f"  convergence_crit_geom  -> {self.convergence_crit_geom:e}")
-        print(f"  convergence_type_geom  -> {self.convergence_type_geom}")
-        print("Starting geom opt now".center(self.print_width))
-        print("#"*self.print_width)
             
     def make_step(self, step):
         for at in range(self.mol.nofatoms):
@@ -224,7 +188,6 @@ class SCF:
 
             self.F_prime = np.einsum('i,ijk', sol[:-1], self.diis_fock_save)
 
-
     def save_fock_prime(self, i):
         if i == 0:
             self.diis_fock_save = np.zeros((0, self.basis.nbf, self.basis.nbf))
@@ -277,32 +240,6 @@ class SCF:
         Q *= 2
         return Q
 
-    def print_scf_setup(self):
-        print("#"*self.print_width)
-        print("SCF setup".center(self.print_width))
-        print("#"*self.print_width)
-        print(f"  max_iter          -> {self.max_iter}")
-        print(f"  convergence_crit  -> {self.convergence_crit:e}")
-        print(f"  convergence_type  -> {self.convergence_type}")
-        print(f"  diis              -> {self.diis}")
-        print(f"     diis_size      -> {self.diis_size}")
-        print("Starting SCF now".center(self.print_width))
-        print("#"*self.print_width)
-
-    def print_not_conv_info(self):
-        print("#"*self.print_width)
-        print(f'    SCF did NOT converge after {self.max_iter} iterations'.center(self.print_width))
-        print("#"*self.print_width)
-
-    def print_conv_info(self):
-        print("#"*self.print_width)
-        print("SCF converged".center(self.print_width))
-        print(f'req. {self.req_iterations} iterations'.center(self.print_width))
-        print("#"*self.print_width)
-        print(f'SCF energy    = {self.scf_energy:,.10f}')
-        print(f'Nuc Repulsion = {self.mol.core_pot:,.10f}')
-        print(f'Final Energy  = {(self.scf_energy + self.mol.core_pot):,.10f}')
-
     def check_convergence(self):
         if self.convergence_type == 'com':
             val = np.linalg.norm(self.X.T @ (self.F @ self.P @ self.S - self.S @ self.P @ self.F) @ self.X)
@@ -336,6 +273,10 @@ class SCF:
     def obtain_X(self):
         eps, vecs = np.linalg.eigh(self.S)
         self.X = vecs @ np.diag(eps**(-0.5)) @ vecs.T
+
+##########################################
+# all functions that deal with integrals #
+##########################################
 
     def prepare_integrals(self):
         self.S = self.overlap_matrix()
@@ -520,3 +461,69 @@ class SCF:
                                                                                             self.basis(sigma),
                                                                                             3, dim)
         return eris_der
+
+########################################
+# only printing functions from here on #
+######################################## 
+    
+    def print_scf_setup(self):
+        print("#"*self.print_width)
+        print("SCF setup".center(self.print_width))
+        print("#"*self.print_width)
+        print(f"  max_iter          -> {self.max_iter}")
+        print(f"  convergence_crit  -> {self.convergence_crit:e}")
+        print(f"  convergence_type  -> {self.convergence_type}")
+        print(f"  diis              -> {self.diis}")
+        print(f"     diis_size      -> {self.diis_size}")
+        print("Starting SCF now".center(self.print_width))
+        print("#"*self.print_width)
+
+    def print_not_conv_info(self):
+        print("#"*self.print_width)
+        print(f'    SCF did NOT converge after {self.max_iter} iterations'.center(self.print_width))
+        print("#"*self.print_width)
+
+    def print_conv_info(self):
+        print("#"*self.print_width)
+        print("SCF converged".center(self.print_width))
+        print(f'req. {self.req_iterations} iterations'.center(self.print_width))
+        print("#"*self.print_width)
+        print(f'SCF energy    = {self.scf_energy:,.10f}')
+        print(f'Nuc Repulsion = {self.mol.core_pot:,.10f}')
+        print(f'Final Energy  = {(self.scf_energy + self.mol.core_pot):,.10f}')
+
+    def print_not_conv_info_geom(self):
+        print("#"*self.print_width)
+        print(f'    GEOM OPT did NOT converge after {self.max_iter_geom} iterations'.center(self.print_width))
+        print("#"*self.print_width)
+
+    def print_conv_geom_info(self):
+        print("#"*self.print_width)
+        print(f"GEOM OPT CONVERGED".center(self.print_width))
+        print(f'req. {self.req_iterations_geom} iterations'.center(self.print_width))
+        print("#"*self.print_width)
+
+    def print_grad_error(self, error):
+        print("#"*self.print_width)
+        print(f"Current Gradient".center(self.print_width))
+        print("{:<10} {:<10} {:<10} {:<10}".format('symbol','x','y', 'z'))
+        for idx, at in enumerate(self.mol.geometry):
+            print("{:<10} {:<10} {:<10} {:<10}".format(at.symbol, f"{self.grad[idx*3]:.7f}", f"{self.grad[idx*3+1]:.7f}", f"{self.grad[idx*3+2]:.7f}"))
+        print(f"Error in geom opt: {error:e}")
+
+    def print_geom_opt_step(self, iter):
+        print("#"*self.print_width)
+        print(f"GEOM OPT ITER {iter}".center(self.print_width))
+        print(f"Current Geometry".center(self.print_width))
+        print(self.mol)
+        
+    def print_geom_opt_setup(self):
+        print("#"*self.print_width)
+        print("Geom opt setup".center(self.print_width))
+        print("#"*self.print_width)
+        print(f"  max_iter_geom          -> {self.max_iter_geom}")
+        print(f"  opt_method             -> {self.opt_method}")
+        print(f"  convergence_crit_geom  -> {self.convergence_crit_geom:e}")
+        print(f"  convergence_type_geom  -> {self.convergence_type_geom}")
+        print("Starting geom opt now".center(self.print_width))
+        print("#"*self.print_width)
